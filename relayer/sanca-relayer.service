@@ -1,0 +1,15 @@
+[Unit]
+Description=Sanca Fee-Bump Relayer
+After=network.target
+
+[Service]
+Type=simple
+User=sanca
+WorkingDirectory=/opt/sanca/relayer
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=5
+EnvironmentFile=/opt/sanca/relayer/.env
+
+[Install]
+WantedBy=multi-user.target

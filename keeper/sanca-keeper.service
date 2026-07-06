@@ -1,0 +1,15 @@
+[Unit]
+Description=Sanca Pool Keeper
+After=network.target
+
+[Service]
+Type=simple
+User=sanca
+WorkingDirectory=/opt/sanca/keeper
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=10
+EnvironmentFile=/opt/sanca/keeper/.env
+
+[Install]
+WantedBy=multi-user.target

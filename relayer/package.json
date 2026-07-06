@@ -1,0 +1,22 @@
+{
+  "name": "sanca-relayer",
+  "version": "0.1.0",
+  "description": "Fee-bump relayer for Sanca — lets users with 0 XLM submit pool transactions.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node --loader ts-node/esm src/index.ts",
+    "start:prod": "node dist/index.js"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^13.0.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}

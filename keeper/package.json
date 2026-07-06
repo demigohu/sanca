@@ -1,0 +1,21 @@
+{
+  "name": "sanca-keeper",
+  "version": "0.1.0",
+  "description": "Off-chain keeper that submits verified drand beacons to settle SancaPool cycles.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node --loader ts-node/esm src/index.ts",
+    "set-keeper": "node --loader ts-node/esm src/set-factory-keeper.ts"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.8.1",
+    "@stellar/stellar-sdk": "^13.0.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
