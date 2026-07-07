@@ -6,6 +6,10 @@ export const MONEYGRAM_MAINNET_DOMAIN = 'stellar.moneygram.com';
 export const MONEYGRAM_MOCK =
   process.env.NEXT_PUBLIC_MONEYGRAM_MOCK === 'true';
 
+/** Non-custodial wallets must co-sign SEP-10 with SIGNING_KEY from stellar.toml. */
+export const MONEYGRAM_CLIENT_COSIGN =
+  process.env.NEXT_PUBLIC_MONEYGRAM_CLIENT_COSIGN === 'true';
+
 /** Wallet app domain hosting /.well-known/stellar.toml (required for non-custodial SEP-10). */
 export const APP_DOMAIN =
   process.env.NEXT_PUBLIC_APP_DOMAIN || 'localhost';

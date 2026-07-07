@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -15,9 +16,54 @@ interface MoneyGramInteractiveProps {
   url: string | null;
   step: RampStep;
   onClose: () => void;
+  onInteractiveMessage?: () => void;
 }
 
-export function MoneyGramInteractive({ open, url, step, onClose }: MoneyGramInteractiveProps) {
+export function MoneyGramInteractive({
+  open,
+  url,
+  step,
+  onClose,
+  onInteractiveMessage,
+}: MoneyGramInteractiveProps) {
+  useEffect(() => {
+    if (!open || !url || !onInteractiveMessage) return;
+
+    let expectedOrigin: string;
+    try {
+      expectedOrigin = new URL(url).origin;
+    } catch {
+      return;
+    }
+
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== expectedOrigin) return;
+
+      const data = event.data;
+      if (data == null) return;
+
+      // SEP-24 postMessage callback: { transaction: { id, status, ... } }
+      if (typeof data === 'object' && ('transaction' in data || 'status' in data)) {
+        onInteractiveMessage();
+        return;
+      }
+
+      if (typeof data === 'string') {
+        try {
+          const parsed = JSON.parse(data) as { transaction?: unknown; status?: unknown };
+          if (parsed.transaction || parsed.status) {
+            onInteractiveMessage();
+          }
+        } catch {
+          // ignore non-JSON strings
+        }
+      }
+    };
+
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [open, url, onInteractiveMessage]);
+
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="max-w-3xl h-[80vh] flex flex-col gap-0 p-0 overflow-hidden">

@@ -54,7 +54,10 @@ export async function initiateSep24Interactive(params: {
   if (!res.ok || !json.url) {
     throw new Error(json.error || `Failed to start SEP-24 ${params.kind}`);
   }
-  return json;
+
+  const url = new URL(json.url);
+  url.searchParams.set('callback', 'postMessage');
+  return { ...json, url: url.toString() };
 }
 
 export async function getSep24Transaction(params: {

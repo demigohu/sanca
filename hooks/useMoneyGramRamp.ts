@@ -14,6 +14,7 @@ import {
 import {
   APP_DOMAIN,
   getMoneyGramDomain,
+  MONEYGRAM_CLIENT_COSIGN,
   MONEYGRAM_MOCK,
 } from '@/lib/moneygram/config';
 import type { Sep24Transaction } from '@/lib/moneygram/types';
@@ -160,7 +161,7 @@ export function useMoneyGramRamp(kind: RampKind) {
         const domain = getMoneyGramDomain();
         await getSep24Info(domain);
 
-        const useClientCosign = process.env.NEXT_PUBLIC_MONEYGRAM_CLIENT_COSIGN === 'true';
+        const useClientCosign = MONEYGRAM_CLIENT_COSIGN;
 
         const token = await getSep10Token({
           moneyGramDomain: domain,
@@ -188,7 +189,18 @@ export function useMoneyGramRamp(kind: RampKind) {
         void pollTransaction(interactive.id, token);
       } catch (err) {
         setStep('error');
-        setError(err instanceof Error ? err.message : 'MoneyGram ramp failed');
+        const message = err instanceof Error ? err.message : 'MoneyGram ramp failed';
+        if (message.includes('Client domain co-sign failed') || message.includes('503')) {
+          setError(
+            `${message} — set MONEYGRAM_CLIENT_SIGNING_SECRET on the server (Vercel env).`,
+          );
+        } else if (message.toLowerCase().includes('domain')) {
+          setError(
+            `${message} — APP_DOMAIN must match MoneyGram allowlist exactly (www.sanca.space).`,
+          );
+        } else {
+          setError(message);
+        }
         stopPolling();
       }
     },
@@ -208,6 +220,13 @@ export function useMoneyGramRamp(kind: RampKind) {
     ],
   );
 
+  const dismissInteractive = useCallback(() => {
+    setInteractiveUrl(null);
+    if (step === 'interactive') {
+      setStep('polling');
+    }
+  }, [step]);
+
   const reset = useCallback(() => {
     stopPolling();
     setStep('idle');
@@ -224,6 +243,7 @@ export function useMoneyGramRamp(kind: RampKind) {
     transaction,
     startRamp,
     reset,
+    dismissInteractive,
     isMock: MONEYGRAM_MOCK,
     appDomain: APP_DOMAIN,
     moneyGramDomain: getMoneyGramDomain(),

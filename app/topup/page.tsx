@@ -140,7 +140,8 @@ export default function TopUpPage() {
         open={dialogOpen}
         url={ramp.interactiveUrl}
         step={ramp.step}
-        onClose={ramp.reset}
+        onClose={ramp.dismissInteractive}
+        onInteractiveMessage={ramp.dismissInteractive}
       />
     </div>
   );
