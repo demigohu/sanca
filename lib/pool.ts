@@ -1,6 +1,6 @@
-import { nativeToScVal } from '@stellar/stellar-sdk';
-import { simulateRead, FACTORY_ADDRESS } from './stellar';
-import type { Cycle, Member, Pool, PoolDetail, PoolState } from './types';
+import { Address, nativeToScVal, xdr } from '@stellar/stellar-sdk';
+import { simulateRead, FACTORY_ADDRESS, getSorobanRpc } from './stellar';
+import type { Cycle, CycleContribution, Member, Pool, PoolDetail, PoolState } from './types';
 
 export { FACTORY_ADDRESS };
 
@@ -27,6 +27,33 @@ function toBig(value: unknown): bigint {
   return BigInt(String(value ?? 0));
 }
 
+/** Deploy ledger close time — pool `cycleStartTime` stays 0 until the pool goes Active. */
+async function fetchPoolDeployTimestamp(poolId: string): Promise<bigint> {
+  try {
+    const server = getSorobanRpc();
+    const ledgerKey = xdr.LedgerKey.contractData(
+      new xdr.LedgerKeyContractData({
+        contract: new Address(poolId).toScAddress(),
+        key: xdr.ScVal.scvLedgerKeyContractInstance(),
+        durability: xdr.ContractDataDurability.persistent(),
+      }),
+    );
+    const result = await server.getLedgerEntries(ledgerKey);
+    const seq = result.entries?.[0]?.lastModifiedLedgerSeq;
+    if (!seq) return BigInt(0);
+
+    const ledgers = await server.getLedgers({
+      startLedger: seq,
+      pagination: { limit: 1 },
+    });
+    const closeTime = ledgers.ledgers?.[0]?.ledgerCloseTime;
+    if (!closeTime) return BigInt(0);
+    return BigInt(closeTime);
+  } catch {
+    return BigInt(0);
+  }
+}
+
 async function readPoolBase(address: string): Promise<Pool> {
   const [info, name, description, periodDuration, yieldSplitBps, members, cycleEndTime, vaultShares] =
     await Promise.all([
@@ -43,6 +70,7 @@ async function readPoolBase(address: string): Promise<Pool> {
   const tuple = info as unknown[];
   const cycleStartTime = toBig(tuple[3]);
   const memberList = (members as string[]) ?? [];
+  const deployTimestamp = await fetchPoolDeployTimestamp(address);
 
   return {
     id: address,
@@ -61,7 +89,7 @@ async function readPoolBase(address: string): Promise<Pool> {
     totalContributed: toBig(tuple[5]),
     yieldSplitBps: Number(yieldSplitBps ?? 0),
     vaultShares: toBig(vaultShares),
-    createdAtTimestamp: cycleStartTime > BigInt(0) ? cycleStartTime : BigInt(0),
+    createdAtTimestamp: deployTimestamp > BigInt(0) ? deployTimestamp : cycleStartTime,
   };
 }
 
@@ -115,6 +143,45 @@ async function readCycles(pool: Pool): Promise<Cycle[]> {
   return cycles;
 }
 
+async function readCycleContributions(pool: Pool, members: Member[]): Promise<CycleContribution[]> {
+  if (!members.length) return [];
+
+  const maxCycle =
+    pool.state === 'Completed'
+      ? pool.totalCycles
+      : pool.state === 'Active'
+        ? pool.currentCycle + 1
+        : 0;
+
+  const contributions: CycleContribution[] = [];
+
+  for (let cycle = 0; cycle < maxCycle; cycle++) {
+    const results = await Promise.all(
+      members.map(async (member) => {
+        const contributed = (await simulateRead(pool.id, 'has_contributed', [
+          nativeToScVal(member.address, { type: 'address' }),
+          nativeToScVal(cycle, { type: 'u32' }),
+        ])) as boolean;
+        return contributed ? member : null;
+      }),
+    );
+
+    for (const member of results) {
+      if (!member) continue;
+      contributions.push({
+        id: `${pool.id}-${member.address}-${cycle}`,
+        memberAddress: member.address,
+        cycleIndex: cycle,
+        amount: pool.contributionPerPeriod,
+        isLiquidated: false,
+        createdAtTimestamp: pool.cycleStartTime,
+      });
+    }
+  }
+
+  return contributions;
+}
+
 export async function getAllPools(): Promise<Pool[]> {
   const addresses = (await simulateRead(FACTORY_ADDRESS, 'get_all_pools')) as string[];
   if (!addresses?.length) return [];
@@ -131,17 +198,15 @@ export async function getPoolInfo(address: string): Promise<Pool> {
 
 export async function getPoolDetail(address: string): Promise<PoolDetail> {
   const pool = await readPoolBase(address);
-  const [members, cycles] = await Promise.all([readMembers(pool), readCycles(pool)]);
-  return { pool, members, cycles };
+  const members = await readMembers(pool);
+  const [cycles, cycleContributions] = await Promise.all([
+    readCycles(pool),
+    readCycleContributions(pool, members),
+  ]);
+  return { pool, members, cycles, cycleContributions };
 }
 
 /** Client-side fetch wrapper (replaces indexer fetchPoolDetail) */
 export async function fetchPoolDetail(poolId: string) {
-  const detail = await getPoolDetail(poolId);
-  return {
-    pool: detail.pool,
-    members: detail.members,
-    cycles: detail.cycles,
-    cycleContributions: [] as Array<{ memberAddress: string; cycleIndex: number }>,
-  };
+  return getPoolDetail(poolId);
 }

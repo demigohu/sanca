@@ -38,10 +38,20 @@ export interface Cycle {
   createdAtTimestamp: bigint | null;
 }
 
+export interface CycleContribution {
+  id: string;
+  memberAddress: string;
+  cycleIndex: number;
+  amount: bigint;
+  isLiquidated: boolean;
+  createdAtTimestamp: bigint;
+}
+
 export interface PoolDetail {
   pool: Pool;
   members: Member[];
   cycles: Cycle[];
+  cycleContributions: CycleContribution[];
 }
 
 export interface UserPool extends Pool {

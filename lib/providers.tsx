@@ -2,12 +2,17 @@
 
 import { PrivyProvider } from '@privy-io/react-auth';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { StellarWalletProvider } from '@/lib/stellar-wallet-context';
 
 const queryClient = new QueryClient();
 const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const inner = <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  const inner = (
+    <QueryClientProvider client={queryClient}>
+      <StellarWalletProvider>{children}</StellarWalletProvider>
+    </QueryClientProvider>
+  );
 
   if (!privyAppId) return inner;
 

@@ -3,6 +3,7 @@
 import { CheckCircle2, Users, TrendingUp, DollarSign, AlertTriangle, Play, CheckCircle, LogOut } from "lucide-react"
 import type { Pool, Member, Cycle, CycleContribution } from "@/lib/types"
 import { formatDistanceToNow, format } from "date-fns"
+import { hasPoolCreatedTimestamp } from "@/lib/pool-dates"
 import { formatUSDC, toBigInt } from "@/lib/utils"
 
 interface CircleActivityProps {
@@ -48,8 +49,7 @@ export default function CircleActivity({ circleId, poolData }: CircleActivityPro
   const cycles = poolData.cycles || [];
   const cycleContributions = poolData.cycleContributions || [];
 
-  // Add pool created event (from pool createdAtTimestamp)
-  if (pool) {
+  if (pool && hasPoolCreatedTimestamp(pool.createdAtTimestamp)) {
     activities.push({
       id: `pool-created-${pool.id}`,
       type: "pool_created",
@@ -59,7 +59,19 @@ export default function CircleActivity({ circleId, poolData }: CircleActivityPro
       icon: CheckCircle,
       color: "text-accent",
     });
+  } else if (pool) {
+    activities.push({
+      id: `pool-created-${pool.id}`,
+      type: "pool_created",
+      title: "Pool Created",
+      description: `Pool "${pool.name}" was created`,
+      date: new Date(),
+      icon: CheckCircle,
+      color: "text-accent",
+    });
+  }
 
+  if (pool) {
     // Add pool started event (if pool is Active or Completed)
     if (pool.state === "Active" || pool.state === "Completed") {
       const poolStartedTime = Number(toBigInt(pool.cycleStartTime));
@@ -78,16 +90,15 @@ export default function CircleActivity({ circleId, poolData }: CircleActivityPro
 
     // Add pool completed event (if pool is Completed)
     if (pool.state === "Completed") {
-      // Use the last cycle's timestamp as pool completion time
       const lastCycle = cycles[cycles.length - 1];
-      if (lastCycle) {
+      if (lastCycle?.createdAtTimestamp) {
         activities.push({
           id: `pool-completed-${pool.id}`,
           type: "pool_completed",
           title: "Pool Completed",
           description: "All cycles have been completed",
           date: new Date(Number(toBigInt(lastCycle.createdAtTimestamp)) * 1000),
-    icon: CheckCircle2,
+          icon: CheckCircle2,
           color: "text-green-500",
         });
       }

@@ -4,7 +4,7 @@ import { CheckCircle2 } from "lucide-react"
 import type { Pool, Member } from "@/lib/types"
 import { formatDistanceToNow } from "date-fns"
 import { useStellarWallet } from "@/hooks/useStellarWallet"
-import { formatUSDC } from "@/lib/utils"
+import { formatUSDC, toBigInt } from "@/lib/utils"
 
 interface CircleMembersProps {
   circleId: string

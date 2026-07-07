@@ -39,10 +39,12 @@ export default function TransactionHistory() {
     )
   }
 
-  const filteredTransactions = (transactions || []).filter((tx) =>
-    tx.circle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tx.description.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredTransactions = (transactions || []).filter((tx) => {
+    const q = searchQuery.toLowerCase();
+    const circle = (tx.circle ?? '').toLowerCase();
+    const description = (tx.description ?? '').toLowerCase();
+    return circle.includes(q) || description.includes(q);
+  });
 
   return (
     <div className="space-y-4">

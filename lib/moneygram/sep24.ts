@@ -1,15 +1,13 @@
 import {
   Asset,
-  Horizon,
   Memo,
   Operation,
-  Transaction,
   TransactionBuilder,
   BASE_FEE,
 } from '@stellar/stellar-sdk';
-import { NETWORK_PASSPHRASE } from '@/lib/stellar';
+import { getSorobanRpc, NETWORK_PASSPHRASE, submitViaRelayer } from '@/lib/stellar';
 import { fetchMoneyGramToml } from './anchor';
-import { HORIZON_URL, MONEYGRAM_USDC_ISSUER } from './config';
+import { MONEYGRAM_USDC_ISSUER } from './config';
 import type { Sep24Info, Sep24InteractiveResponse, Sep24Transaction } from './types';
 
 async function getTransferServer(moneyGramDomain: string): Promise<string> {
@@ -89,8 +87,8 @@ export async function submitWithdrawPayment(params: {
     throw new Error('Transaction is not ready for user transfer');
   }
 
-  const horizon = new Horizon.Server(HORIZON_URL);
-  const account = await horizon.loadAccount(params.userPublicKey);
+  const server = getSorobanRpc();
+  const account = await server.getAccount(params.userPublicKey);
   const asset = new Asset('USDC', MONEYGRAM_USDC_ISSUER);
 
   let builder = new TransactionBuilder(account, {
@@ -113,6 +111,5 @@ export async function submitWithdrawPayment(params: {
   const tx = builder.setTimeout(300).build();
   const signedXdr = await params.signTransactionXdr(tx.toXDR(), params.userPublicKey);
 
-  const result = await horizon.submitTransaction(Transaction.fromXDR(signedXdr, NETWORK_PASSPHRASE));
-  return result.hash;
+  return submitViaRelayer(signedXdr);
 }

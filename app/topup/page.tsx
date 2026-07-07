@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useMoneyGramRamp } from '@/hooks/useMoneyGramRamp';
+import { WALLET_PREPARING_LABEL } from '@/lib/wallet-setup';
 import { MoneyGramInteractive } from '@/components/moneygram/moneygram-interactive';
 import ConnectWalletButton from '@/components/wallet/connect-wallet-button';
 
@@ -77,13 +78,19 @@ export default function TopUpPage() {
               <ConnectWalletButton />
               <Button
                 className="flex-1"
-                disabled={ramp.step === 'authenticating' || ramp.step === 'starting'}
+                disabled={
+                  ramp.walletPreparing ||
+                  ramp.step === 'authenticating' ||
+                  ramp.step === 'starting'
+                }
                 onClick={() => void ramp.startRamp(amount)}
               >
-                {(ramp.step === 'authenticating' || ramp.step === 'starting') && (
+                {(ramp.walletPreparing ||
+                  ramp.step === 'authenticating' ||
+                  ramp.step === 'starting') && (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 )}
-                Continue with MoneyGram
+                {ramp.walletPreparing ? WALLET_PREPARING_LABEL : 'Continue with MoneyGram'}
               </Button>
             </div>
 

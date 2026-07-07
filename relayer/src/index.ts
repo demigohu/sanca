@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { relay } from './relay.js';
+import { sponsorAccount } from './sponsor.js';
 import { config } from './config.js';
 
 const app = express();
@@ -16,6 +17,23 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', network: config.network });
+});
+
+app.post('/sponsor', async (req: Request, res: Response) => {
+  const { address } = req.body as { address?: string };
+  if (!address || typeof address !== 'string') {
+    res.status(400).json({ error: 'Missing address' });
+    return;
+  }
+
+  try {
+    const result = await sponsorAccount(address);
+    res.json(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[sponsor error]', message);
+    res.status(400).json({ error: message });
+  }
 });
 
 app.post('/relay', async (req: Request, res: Response) => {

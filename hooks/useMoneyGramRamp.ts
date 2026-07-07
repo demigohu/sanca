@@ -17,6 +17,7 @@ import {
   MONEYGRAM_MOCK,
 } from '@/lib/moneygram/config';
 import type { Sep24Transaction } from '@/lib/moneygram/types';
+import { WALLET_PREPARING_LABEL } from '@/lib/wallet-setup';
 
 export type RampKind = 'deposit' | 'withdraw';
 
@@ -36,7 +37,7 @@ function sleep(ms: number) {
 
 export function useMoneyGramRamp(kind: RampKind) {
   const { ready, authenticated, login } = usePrivy();
-  const { address } = useStellarWallet();
+  const { address, walletReady, preparing, setupError } = useStellarWallet();
   const { signTransactionXdr } = useSignStellarTx();
 
   const [step, setStep] = useState<RampStep>('idle');
@@ -126,8 +127,16 @@ export function useMoneyGramRamp(kind: RampKind) {
         login();
         return;
       }
-      if (!address) {
-        setError('Stellar wallet not ready. Please wait a moment and try again.');
+      if (!address || preparing) {
+        setError(WALLET_PREPARING_LABEL);
+        return;
+      }
+      if (setupError) {
+        setError(`Wallet setup failed: ${setupError}`);
+        return;
+      }
+      if (!walletReady) {
+        setError(WALLET_PREPARING_LABEL);
         return;
       }
 
@@ -185,6 +194,9 @@ export function useMoneyGramRamp(kind: RampKind) {
     },
     [
       address,
+      preparing,
+      setupError,
+      walletReady,
       authenticated,
       cosignTransactionXdr,
       kind,
@@ -215,5 +227,7 @@ export function useMoneyGramRamp(kind: RampKind) {
     isMock: MONEYGRAM_MOCK,
     appDomain: APP_DOMAIN,
     moneyGramDomain: getMoneyGramDomain(),
+    walletPreparing: preparing,
+    walletReady,
   };
 }

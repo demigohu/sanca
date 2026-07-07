@@ -18,6 +18,21 @@ export const RPC_URL =
 
 export const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS!;
 export const USDC_CONTRACT = process.env.NEXT_PUBLIC_USDC_CONTRACT!;
+/** Blend USDC classic issuer (Sanca pools + DeFindex vault on testnet). */
+export const POOL_USDC_ISSUER =
+  process.env.NEXT_PUBLIC_POOL_USDC_ISSUER ||
+  process.env.NEXT_PUBLIC_BLEND_USDC_ISSUER ||
+  (process.env.NEXT_PUBLIC_NETWORK === 'public'
+    ? 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN'
+    : 'GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56');
+/** @deprecated use POOL_USDC_ISSUER */
+export const USDC_ISSUER = POOL_USDC_ISSUER;
+export const USDC_ASSET_CODE = 'USDC';
+export const HORIZON_URL =
+  process.env.NEXT_PUBLIC_HORIZON_URL ||
+  (process.env.NEXT_PUBLIC_NETWORK === 'public'
+    ? 'https://horizon.stellar.org'
+    : 'https://horizon-testnet.stellar.org');
 /** Stellar USDC SAC (testnet + mainnet MoneyGram) uses 7 decimals. */
 export const USDC_DECIMALS = Number(process.env.NEXT_PUBLIC_USDC_DECIMALS ?? '7');
 export const USDC_SCALE = 10 ** USDC_DECIMALS;
@@ -75,6 +90,25 @@ export async function submitViaRelayer(signedInnerXdr: string): Promise<string> 
   const data = (await res.json()) as { hash?: string; error?: string };
   if (!res.ok || data.error) throw new Error(data.error || 'Relay failed');
   return data.hash!;
+}
+
+/** Create/fund Stellar account for new embedded wallets (via relayer → Friendbot on testnet). */
+export async function sponsorStellarAccount(address: string): Promise<{
+  created: boolean;
+  hash: string | null;
+}> {
+  const res = await fetch(`${RELAYER_URL}/sponsor`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address }),
+  });
+  const data = (await res.json()) as {
+    created?: boolean;
+    hash?: string | null;
+    error?: string;
+  };
+  if (!res.ok || data.error) throw new Error(data.error || 'Account sponsorship failed');
+  return { created: !!data.created, hash: data.hash ?? null };
 }
 
 export function shortAddress(addr: string): string {

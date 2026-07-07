@@ -16,11 +16,12 @@ export function getMoneyGramDomain(): string {
     : MONEYGRAM_TESTNET_DOMAIN;
 }
 
-/** MoneyGram testnet USDC — different from Blend USDC used by Sanca pools. */
+/** Circle USDC for MoneyGram ramps — separate from Blend USDC in Sanca pools. */
 export const MONEYGRAM_USDC_ISSUER =
-  process.env.NEXT_PUBLIC_NETWORK === 'public'
+  process.env.NEXT_PUBLIC_MONEYGRAM_USDC_ISSUER ||
+  (process.env.NEXT_PUBLIC_NETWORK === 'public'
     ? 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN'
-    : 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+    : 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5');
 
 export const HORIZON_URL =
   process.env.NEXT_PUBLIC_NETWORK === 'public'

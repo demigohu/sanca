@@ -6,13 +6,13 @@ import { ArrowLeft, Users, TrendingUp, Calendar, Loader2 } from "lucide-react"
 import CircleDetailTabs from "@/components/circles/detail-tabs"
 import { useParams } from "next/navigation"
 import { usePoolDetail } from "@/hooks/usePools"
-import { formatDistanceToNow, format } from "date-fns"
 import { JoinPoolButton } from "@/components/circles/join-pool-button"
 import { ContributeButton } from "@/components/circles/contribute-button"
 import { WithdrawButton } from "@/components/circles/withdraw-button"
 // import { CycleCountdown } from "@/components/circles/cycle-countdown"
 import { CycleCountdown } from "@/components/circles/cycle-countdown"
 import { formatUSDC, toBigInt } from "@/lib/utils"
+import { formatPoolCreatedDisplay } from "@/lib/pool-dates"
 
 export default function CircleDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -89,7 +89,7 @@ export default function CircleDetailPage() {
 
   const pool = data.pool;
   const progress = getProgress();
-  const createdDate = new Date(Number(toBigInt(pool.createdAtTimestamp)) * 1000);
+  const createdDisplay = formatPoolCreatedDisplay(pool.createdAtTimestamp);
   const isFull = data.members.length >= pool.maxMembers;
 
   // useEffect(() => {
@@ -172,12 +172,14 @@ export default function CircleDetailPage() {
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Vault Shares</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Vault Balance</p>
               <p className="text-2xl font-bold text-accent font-mono flex items-center gap-2">
                 <TrendingUp className="w-5 h-5" />
-                {pool.vaultShares.toString()}
+                ${formatUSDC(pool.vaultShares)}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">DeFindex dfToken shares (on-chain)</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                DeFindex vault (~USDC; {pool.vaultShares.toString()} share units)
+              </p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Total Contributed</p>
@@ -190,10 +192,10 @@ export default function CircleDetailPage() {
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Created</p>
               <p className="text-sm text-foreground flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-accent" />
-                {format(createdDate, "MMM d, yyyy")}
+                {createdDisplay.primary}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                {formatDistanceToNow(createdDate, { addSuffix: true })}
+                {createdDisplay.secondary}
               </p>
             </div>
           </div>

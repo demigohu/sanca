@@ -19,7 +19,7 @@ import { KeeperPoolMetrics } from "@/components/circles/keeper-pool-metrics"
 import { usePools } from "@/hooks/usePools"
 import type { Pool } from "@/lib/types"
 import { useStellarWallet } from "@/hooks/useStellarWallet"
-import { formatDistanceToNow } from "date-fns"
+import { formatPoolCreatedDisplay } from "@/lib/pool-dates"
 import { formatUSDC } from "@/lib/utils"
 
 type FilterStatus = "all" | "Open" | "Active" | "Completed"
@@ -163,7 +163,7 @@ export default function CirclesPage() {
               {paginatedCircles.map((pool) => {
                 const progress = getProgress(pool)
                 const userStatus = getUserStatus(pool)
-                const createdDate = new Date(Number(pool.createdAtTimestamp) * 1000)
+                const createdDisplay = formatPoolCreatedDisplay(pool.createdAtTimestamp)
 
                 return (
                   <Link key={pool.id} href={`/circles/${pool.id}`}>
@@ -229,7 +229,7 @@ export default function CirclesPage() {
                       {/* Footer */}
                       <div className="border-t border-border pt-4 flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(createdDate, { addSuffix: true })}
+                          {createdDisplay.secondary}
                         </span>
                         {address && (
                           <span

@@ -25,6 +25,8 @@ import {
   SelectValue,
 } from "../ui/select";
 import { useCreatePool } from "@/hooks/useCreatePool";
+import { useStellarWallet } from "@/hooks/useStellarWallet";
+import { WALLET_PREPARING_LABEL } from "@/lib/wallet-setup";
 import { PLATFORM_YIELD_SPLIT_PERCENT } from "@/lib/constants";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -40,6 +42,7 @@ export function CreateCircleDialog({
 }: CreateCircleDialogProps) {
   const router = useRouter();
   const { authenticated, login } = usePrivy();
+  const { address, preparing, walletReady, setupError } = useStellarWallet();
   const { createPool, isPending, isConfirming, isSuccess, error, hash } =
     useCreatePool();
 
@@ -98,6 +101,16 @@ export function CreateCircleDialog({
       return;
     }
 
+    if (preparing || !address) {
+      toast.info(WALLET_PREPARING_LABEL);
+      return;
+    }
+
+    if (setupError) {
+      toast.error(`Wallet setup failed: ${setupError}`);
+      return;
+    }
+
     if (!formData.circleName || !formData.contribution) {
       toast.error("Please fill in all required fields");
       return;
@@ -140,7 +153,8 @@ export function CreateCircleDialog({
     }
   };
 
-  const isLoading = isPending || isConfirming;
+  const isLoading = isPending || isConfirming || preparing;
+  const canSubmit = walletReady && authenticated;
 
   const handleCancel = () => {
     onOpenChange(false);
@@ -364,11 +378,15 @@ export function CreateCircleDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !authenticated} className="w-full">
+            <Button type="submit" disabled={isLoading || !canSubmit} className="w-full">
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {isConfirming ? "Confirming..." : "Creating..."}
+                  {preparing
+                    ? WALLET_PREPARING_LABEL
+                    : isConfirming
+                      ? "Confirming..."
+                      : "Creating..."}
                 </>
               ) : (
                 "Create Circle"
@@ -378,6 +396,16 @@ export function CreateCircleDialog({
           {!authenticated && (
             <p className="text-xs text-muted-foreground text-center">
               Please connect your wallet to create a circle
+            </p>
+          )}
+          {authenticated && preparing && (
+            <p className="text-xs text-muted-foreground text-center">
+              {WALLET_PREPARING_LABEL} One-time setup, no XLM needed from you.
+            </p>
+          )}
+          {authenticated && setupError && (
+            <p className="text-xs text-destructive text-center">
+              Wallet setup failed: {setupError}. Is the relayer running?
             </p>
           )}
         </form>

@@ -9,6 +9,7 @@ import "./globals.css"
 import { Inter, JetBrains_Mono, Space_Grotesk as V0_Font_Space_Grotesk, Space_Mono as V0_Font_Space_Mono } from 'next/font/google'
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
+import { Toaster } from "@/components/ui/sonner"
 
 // Initialize fonts
 const _spaceGrotesk = V0_Font_Space_Grotesk({ subsets: ['latin'], weight: ["300","400","500","600","700"] })
@@ -38,6 +39,7 @@ export default function RootLayout({
             <Navbar />
             {children}
             <Footer />
+            <Toaster richColors closeButton position="top-right" />
           </ThemeProvider>
         </Providers>
         {/* <Analytics /> */}

@@ -413,6 +413,91 @@ Member --USDC--> SancaPool --deposit()--> DeFindex Vault
 
 **Post-hackathon — SAC receipt token (sPSP):** Optional wrapper SAC minted to user wallet on `join()`, burned on `withdraw()` / liquidation. Gives wallet visibility and composability without changing DeFindex custody model. **Not required for hackathon** — frontend reads `get_member_vault_shares` + vault PPS for display.
 
+### 7.7 Cycle Timing & Keeper Settlement Semantics
+
+> **Status:** Documented behavior (on-chain v1). UX clarity = **P1 hackathon**; fixed absolute schedule = **post-hackathon**.
+
+#### 7.7.1 On-chain behavior (current)
+
+Cycle timing di `sanca_pool` **bukan jadwal absolut per cycle**. Satu pasang timestamp:
+
+| Field | Arti |
+|-------|------|
+| `cycle_start_time` | Mulai cycle **saat ini** |
+| `period_duration` | Durasi cycle (detik, UI input hari × 86_400) |
+| `get_cycle_end_time()` | `cycle_start_time + period_duration` |
+
+Saat **`settle_cycle` sukses**, contract:
+
+1. Menyelesaikan cycle N (winner, liquidation, yield bonus).
+2. `current_cycle += 1`.
+3. **`cycle_start_time = env.ledger().timestamp()`** (waktu settle, bukan deadline semula).
+4. `last_drand_round = drand_round` (monotonic).
+
+**Implikasi:** Cycle berikutnya **selalu mulai dari momen settle**, bukan dari kapan cycle seharusnya berakhir. Telat settle = **seluruh timeline geser ke depan**.
+
+**Contoh:**
+
+| Event | Waktu |
+|-------|--------|
+| Pool full → cycle 0 mulai | Senin 10:00 |
+| Cycle 0 seharusnya settle (`cycle_end`) | Selasa 10:00 (1 day) |
+| Keeper offline | Selasa–Kamis |
+| Cycle 0 **baru** settle | Kamis 14:00 |
+| **Cycle 1 mulai** | **Kamis 14:00** (bukan Selasa 10:00) |
+| Cycle 1 settle (keeper on) | Jumat 14:00 |
+
+#### 7.7.2 Keeper uptime & catch-up
+
+| Pertanyaan | Jawaban |
+|------------|---------|
+| Keeper harus on 24/7? | **Production: ya** (VPS/systemd). Dev/demo: boleh off, tapi pool **pause** sampai settle. |
+| Cycle lewat tapi keeper off — hilang? | **Tidak.** Cycle **tidak advance** tanpa `settle_cycle`. Saat keeper on lagi → settle **catch-up**. |
+| Langsung settle pas on? | **Ya**, pada poll pertama (~`POLL_INTERVAL_MS`, default 15s) jika: pool **Active**, `now >= cycle_end_time`, drand round > `last_drand_round`, dan `factory.get_keeper()` = keeper wallet. |
+| Bisa settle banyak cycle telat sekaligus? | **Tidak.** Satu tx = **satu cycle**. Setelah settle, cycle baru + tunggu `period_duration` lagi (kecuali period sudah lewat karena edge case timing). |
+| Expiry deadline settle? | **Tidak ada** — cycle yang overdue tetap bisa di-settle kapan saja. |
+
+**Drand:** Keeper pakai **latest** quicknet beacon; contract hanya minta round **strictly increasing** + BLS valid — catch-up tidak butuh round historis.
+
+**Prasyarat settle (selain keeper):** Semua member ideally sudah `contribute()`; yang miss → **liquidation** collateral (bukan abort settle).
+
+#### 7.7.3 UX ambiguity (known product issue)
+
+User expectation (web2 arisan):
+
+> "Cycle 1 hari = Senin–Selasa, Rabu–Kamis, …" (jadwal **fixed**)
+
+On-chain reality:
+
+> "Cycle 1 hari = **dari settle terakhir** + 1 hari"
+
+Tanpa penjelasan UI, countdown / "Created" / cycle labels terasa **ambigu** — terutama jika keeper telat atau off.
+
+**Hackathon UX requirements (P1):**
+
+| UI state | Kondisi | Copy (ID) contoh |
+|----------|---------|------------------|
+| **Cycle active** | `now < cycle_end_time` | Countdown ke akhir periode |
+| **Settlement pending** | `now >= cycle_end_time` && pool Active | "Periode selesai — menunggu keeper mengundi pemenang" |
+| **Cycle advanced** | Setelah event `cycle_end` | Tampilkan cycle baru + `cycle_start` aktual |
+
+**Tampilkan dua konsep waktu di circle detail (P1):**
+
+1. **Scheduled end** — `cycle_start + period_duration` (deadline kontribusi / periode).
+2. **Actual timeline** — catatan bahwa cycle berikutnya dimulai **setelah settlement**, bukan otomatis di jadwal kalender.
+
+**Jangan:** countdown negatif diam-diam; jangan tampilkan "over 56 years ago" untuk timestamp `0` (pool Open belum start).
+
+#### 7.7.4 Post-hackathon protocol options
+
+| Approach | Behavior | Trade-off |
+|----------|----------|-----------|
+| **A. Fixed schedule (recommended v2)** | `cycle_end[i] = pool_start + (i+1) × period` — settle boleh telat, cycle index tetap; UI jadwal tidak geser | Lebih kompleks di contract; perlu definisi overlap / grace |
+| **B. Grace + events** | Emit `settlement_delayed` jika `now > cycle_end + grace` | UX + alerting; contract tetap v1 reset-on-settle |
+| **C. Keeper SLA + monitoring** | Alert jika `now > cycle_end + N menit` | Ops-only; tidak ubah semantics |
+
+**Rekomendasi:** Hackathon = **7.7.3 UX** saja. v2 = **Approach A** jika produk butuh jadwal arisan seperti web2.
+
 ---
 
 ## 8. Functional Requirements
@@ -509,6 +594,7 @@ Member --USDC--> SancaPool --deposit()--> DeFindex Vault
 |----|-------------|----------|--------|
 | FR-6.1 | "Bayar Cicilan" button visible when pool Active and cycle running | P0 | ✅ |
 | FR-6.2 | Show contribution amount and deadline (cycle end time) | P0 | 🟡 |
+| FR-6.2a | Distinguish **cycle active** vs **settlement pending** (`now >= cycle_end`) — see [§7.7](#77-cycle-timing--keeper-settlement-semantics) | P1 | ❌ |
 | FR-6.3 | Disable button if already contributed this cycle | P0 | ✅ |
 | FR-6.4 | Approve + `SancaPool.contribute()` via relayer | P0 | ✅ |
 | FR-6.5 | Show contribution status per member (optional) | P1 | ❌ |
@@ -530,6 +616,8 @@ Member --USDC--> SancaPool --deposit()--> DeFindex Vault
 | FR-7.7 | Advance cycle counter | P0 | ✅ |
 | FR-7.8 | When all cycles done → state = Completed | P0 | ✅ |
 | FR-7.9 | Frontend shows winner notification after settlement | P1 | ❌ |
+| FR-7.10 | Document & surface: next cycle starts **at settle time**, not original schedule — see [§7.7](#77-cycle-timing--keeper-settlement-semantics) | P1 | ❌ |
+| FR-7.11 | Keeper catch-up: no manual CLI if keeper restarts after overdue cycle (automatic on next poll) | P0 | ✅ |
 
 **Acceptance:** Pool auto-settles without manual CLI intervention during demo.
 
@@ -573,6 +661,7 @@ Member --USDC--> SancaPool --deposit()--> DeFindex Vault
 | FR-10.1 | Dashboard shows USDC balance + IDR equivalent | P0 | ❌ |
 | FR-10.2 | List active circles user joined | P0 | ❌ |
 | FR-10.3 | Show next payout date / cycle countdown | P1 | ❌ |
+| FR-10.3a | **Settlement pending** state when period ended but cycle not settled yet | P1 | ❌ |
 | FR-10.4 | Activity feed: contributions, wins, withdrawals | P1 | ❌ |
 | FR-10.5 | Circle detail timeline: cycles, winners, amounts | P1 | ❌ |
 
@@ -824,6 +913,14 @@ MAX_FEE=100000
 - Fetch drand quicknet + decompress G1 (CAP-0059) + `settle_cycle`
 - `npm run set-keeper` — admin sets factory keeper once (bukan per pool)
 - systemd deploy guide in `keeper/README.md`
+- **Catch-up:** jika keeper off saat `cycle_end` lewat, settle otomatis saat service hidup lagi (lihat [§7.7](#77-cycle-timing--keeper-settlement-semantics))
+
+**Operational expectation:**
+
+| Environment | Keeper uptime |
+|-------------|---------------|
+| Production | Always-on (VPS/systemd) |
+| Demo / dev | Boleh stop-start; timeline pool **geser** sesuai §7.7 |
 
 **Remaining:**
 
@@ -1117,6 +1214,7 @@ Dashboard → Active Circle card → Circle Detail → "Bayar Cicilan" (enabled)
 | Pool full | "Tabungan ini sudah penuh." |
 | Already contributed | "Kamu sudah bayar cicilan periode ini." |
 | Pool not active | "Tabungan belum dimulai." |
+| Settlement pending | "Periode selesai — menunggu pengundian pemenang." |
 | Tx failed | "Transaksi gagal. Coba lagi ya." |
 | Network error | "Koneksi bermasalah. Periksa internet kamu." |
 
@@ -1207,7 +1305,8 @@ After 3 cycles: each member withdraws ~15 USDC + compounded yield share
 2. **Vault shares:** Per-member accounting via `MemberVaultShares` (not equal split). No SAC receipt token in wallet for hackathon — balance shown in app.
 3. **MoneyGram USDC ≠ Blend USDC** on testnet — separate asset flows.
 4. **Drand round timing:** Contract enforces monotonic round, not wall-clock alignment with cycle end.
-5. **BLS / crypto:** Soroban example pattern; not independently audited for production.
+5. **Cycle schedule shifts on late settle:** `cycle_start_time` resets to settle ledger time — not a fixed calendar ROSCA schedule. See [§7.7](#77-cycle-timing--keeper-settlement-semantics). Frontend must show **settlement pending** state.
+6. **BLS / crypto:** Soroban example pattern; not independently audited for production.
 
 ---
 
@@ -1495,6 +1594,7 @@ Demo video + submission
 | Multi-anchor support | Beyond MoneyGram |
 | Local stablecoins | IDR on-chain via anchor |
 | Push notifications | Cycle reminders |
+| Fixed cycle schedule (v2) | Absolute `pool_start + n×period` — settle late without shifting UX timeline; see §7.7.4 |
 | Referral program | Community growth |
 
 ### Phase C: Scale (2027)
@@ -1516,7 +1616,8 @@ Demo video + submission
 | R2 | Privy Stellar rawSign integration issues | High | Medium | Start Day 1; fallback to Freighter for demo |
 | R3 | Relayer fee-bump Soroban auth complexity | High | Medium | Dev A focuses exclusively Days 1–4 |
 | R4 | DeFindex vault testnet downtime | Medium | Low | Pre-deposit USDC before demo; monitor vault |
-| R5 | Keeper fails during live demo | High | Medium | Pre-settle demo pool before demo; video backup |
+| R5 | Keeper fails during live demo | High | Medium | Pre-settle demo pool before demo; video backup; always-on keeper in prod |
+| R5a | Late settle shifts cycle timeline (UX confusion) | Medium | Medium | §7.7 UX: settlement pending + explain next cycle starts at settle; v2 fixed schedule |
 | R6 | Frontend port takes longer than expected | Medium | Medium | Prioritize demo path pages only |
 | R7 | 2-person team bandwidth | High | High | Strict scope: no nice-to-haves until Phase 3 |
 | R8 | MoneyGram USDC ≠ Blend USDC mismatch | Medium | Certain | Document in demo; show swap step or separate balances |
@@ -1608,6 +1709,8 @@ Each feature is done when:
 | MemberVaultShares | On-chain map tracking each member's share of pool's DeFindex position |
 | sPSP (planned) | Post-hackathon SAC receipt token — wallet-visible claim on member vault share (§7.6) |
 | PPS | Price Per Share (DeFindex vault) |
+| `cycle_start_time` | Ledger timestamp when the **current** cycle began; reset to settle time after each `settle_cycle` (§7.7) |
+| Settlement pending | UI state: `now >= cycle_end_time` but `settle_cycle` not yet executed |
 
 ### B. Reference Documents
 

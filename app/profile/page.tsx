@@ -7,6 +7,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useStellarWallet } from "@/hooks/useStellarWallet";
 import WalletStats from "@/components/wallet/wallet-stats"
 import TransactionHistory from "@/components/wallet/transaction-history"
+import { UsdcBalancesCard } from "@/components/wallet/usdc-balances"
 import { useUserStats } from "@/hooks/useUserStats"
 import { Loader2 } from "lucide-react"
 import ConnectWalletButton from "@/components/wallet/connect-wallet-button"
@@ -98,6 +99,10 @@ export default function ProfilePage() {
                   </a>
                 </Button>
               </div>
+            </div>
+
+            <div className="pt-6 border-t border-border">
+              <UsdcBalancesCard />
             </div>
 
             {/* Quick Stats */}

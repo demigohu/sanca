@@ -17,10 +17,12 @@ import { Check, Copy, History, LogOut, User } from "lucide-react";
 import Link from "next/link";
 import { useStellarWallet } from "@/hooks/useStellarWallet";
 import { formatAddress } from "@/lib/utils";
+import { WALLET_PREPARING_LABEL } from "@/lib/wallet-setup";
+import { UsdcBalancesDropdownSummary } from "@/components/wallet/usdc-balances";
 
 export default function ConnectWalletButton() {
   const { ready, authenticated, login, logout } = usePrivy();
-  const { address, creating } = useStellarWallet();
+  const { address, preparing } = useStellarWallet();
   const [copied, setCopied] = React.useState(false);
 
   const handleCopyAddress = React.useCallback(async (addr?: string | null) => {
@@ -54,7 +56,7 @@ export default function ConnectWalletButton() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button size="sm" variant="outline">
-          {creating ? "Setting up…" : address ? formatAddress(address, 8, 4) : "Wallet"}
+          {preparing ? WALLET_PREPARING_LABEL : address ? formatAddress(address, 8, 4) : 'Wallet'}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="rounded">
@@ -86,6 +88,12 @@ export default function ConnectWalletButton() {
                 <Copy className="w-4 h-4 group-hover:text-white" />
               )}
             </DropdownMenuItem>
+          )}
+          {address && (
+            <>
+              <DropdownMenuSeparator />
+              <UsdcBalancesDropdownSummary />
+            </>
           )}
           <DropdownMenuLabel className="flex items-center gap-2">
             <span className="font-medium">Network</span>

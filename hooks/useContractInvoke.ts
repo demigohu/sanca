@@ -32,7 +32,14 @@ export function useContractInvoke() {
     }
 
     const server = getSorobanRpc();
-    const account = await server.getAccount(userAddress);
+    let account;
+    try {
+      account = await server.getAccount(userAddress);
+    } catch {
+      throw new Error(
+        `Stellar account ${userAddress} is not active yet. Wait a few seconds after login, or ensure the relayer is running.`,
+      );
+    }
     const contract = new Contract(contractAddress);
     const tx = new TransactionBuilder(account, {
       fee: BASE_FEE,
@@ -59,7 +66,7 @@ export function useContractInvoke() {
 
     const sigBytes = Buffer.from(signatureHex.replace(/^0x/, ''), 'hex');
     const hint = Buffer.from(Keypair.fromPublicKey(userAddress).rawPublicKey()).slice(-4);
-    prepared.signatures = [new xdr.DecoratedSignature({ hint, signature: sigBytes })];
+    prepared.signatures.push(new xdr.DecoratedSignature({ hint, signature: sigBytes }));
 
     return submitViaRelayer(prepared.toXDR());
   }

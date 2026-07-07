@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { nativeToScVal } from '@stellar/stellar-sdk';
+import { useQueryClient } from '@tanstack/react-query';
 import { useContractInvoke } from './useContractInvoke';
 import { usePoolDetail } from './usePools';
 
 export function useContribute(poolAddress: string | undefined) {
+  const queryClient = useQueryClient();
   const { invoke, userAddress } = useContractInvoke();
   const { data } = usePoolDetail(poolAddress ?? null);
   const [isPending, setIsPending] = useState(false);
@@ -27,6 +29,7 @@ export function useContribute(poolAddress: string | undefined) {
       ]);
       setHash(txHash);
       setIsSuccess(true);
+      await queryClient.invalidateQueries({ queryKey: ['pool', poolAddress] });
       return txHash;
     } catch (e) {
       const err = e instanceof Error ? e : new Error('Failed to contribute');
