@@ -22,7 +22,7 @@ export async function getSep10Token(params: {
   const qs = new URLSearchParams({
     account: params.userPublicKey,
   });
-  // MoneyGram non-custodial: allowlist is on client_domain only — home_domain is rejected.
+  // Non-custodial Privy: MoneyGram allowlists client_domain (not home_domain).
   if (useClientDomain) {
     qs.set('client_domain', params.appDomain);
   } else {

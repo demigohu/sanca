@@ -97,10 +97,26 @@ export default function CashOutPage() {
 
             {ramp.step === 'completed' && ramp.transaction && (
               <Alert className="border-emerald-500/30 bg-emerald-500/10">
-                <AlertTitle>Withdrawal submitted</AlertTitle>
-                <AlertDescription>
-                  Pick up your cash with reference{' '}
-                  {ramp.transaction.external_transaction_id || ramp.transaction.id}
+                <AlertTitle>Withdrawal ready for pickup</AlertTitle>
+                <AlertDescription className="space-y-1">
+                  <p>
+                    Reference number:{' '}
+                    <strong>
+                      {ramp.transaction.external_transaction_id || ramp.transaction.id}
+                    </strong>
+                  </p>
+                  {ramp.transaction.more_info_url && (
+                    <p>
+                      <a
+                        href={ramp.transaction.more_info_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline"
+                      >
+                        View pickup details
+                      </a>
+                    </p>
+                  )}
                 </AlertDescription>
               </Alert>
             )}
@@ -126,7 +142,7 @@ export default function CashOutPage() {
         url={ramp.interactiveUrl}
         step={ramp.step}
         onClose={ramp.dismissInteractive}
-        onInteractiveMessage={ramp.dismissInteractive}
+        onRampMessage={ramp.handleRampMessage}
       />
     </div>
   );

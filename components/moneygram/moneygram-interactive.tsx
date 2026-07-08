@@ -10,13 +10,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { RampStep } from '@/hooks/useMoneyGramRamp';
+import { parseMoneyGramRampMessage } from '@/lib/moneygram/post-message';
+import type { MoneyGramRampMessage } from '@/lib/moneygram/post-message';
 
 interface MoneyGramInteractiveProps {
   open: boolean;
   url: string | null;
   step: RampStep;
   onClose: () => void;
-  onInteractiveMessage?: () => void;
+  onRampMessage?: (message: MoneyGramRampMessage) => void;
 }
 
 export function MoneyGramInteractive({
@@ -24,45 +26,28 @@ export function MoneyGramInteractive({
   url,
   step,
   onClose,
-  onInteractiveMessage,
+  onRampMessage,
 }: MoneyGramInteractiveProps) {
   useEffect(() => {
-    if (!open || !url || !onInteractiveMessage) return;
-
-    let expectedOrigin: string;
-    try {
-      expectedOrigin = new URL(url).origin;
-    } catch {
-      return;
-    }
+    if (!open || !onRampMessage) return;
 
     const handler = (event: MessageEvent) => {
-      if (event.origin !== expectedOrigin) return;
-
-      const data = event.data;
-      if (data == null) return;
-
-      // SEP-24 postMessage callback: { transaction: { id, status, ... } }
-      if (typeof data === 'object' && ('transaction' in data || 'status' in data)) {
-        onInteractiveMessage();
-        return;
-      }
-
-      if (typeof data === 'string') {
+      if (url) {
         try {
-          const parsed = JSON.parse(data) as { transaction?: unknown; status?: unknown };
-          if (parsed.transaction || parsed.status) {
-            onInteractiveMessage();
-          }
+          const expectedOrigin = new URL(url).origin;
+          if (event.origin !== expectedOrigin) return;
         } catch {
-          // ignore non-JSON strings
+          return;
         }
       }
+
+      const message = parseMoneyGramRampMessage(event.data);
+      if (message) onRampMessage(message);
     };
 
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [open, url, onInteractiveMessage]);
+  }, [open, url, onRampMessage]);
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>

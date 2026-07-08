@@ -9,6 +9,7 @@ import { getSorobanRpc, NETWORK_PASSPHRASE, submitViaRelayer } from '@/lib/stell
 import { fetchMoneyGramToml } from './anchor';
 import { MONEYGRAM_USDC_ISSUER } from './config';
 import type { Sep24Info, Sep24InteractiveResponse, Sep24Transaction } from './types';
+import type { Sep9Fields } from './sep9';
 
 async function getTransferServer(moneyGramDomain: string): Promise<string> {
   const toml = await fetchMoneyGramToml(moneyGramDomain);
@@ -30,16 +31,24 @@ export async function initiateSep24Interactive(params: {
   moneyGramDomain: string;
   authToken: string;
   kind: 'deposit' | 'withdraw';
+  account: string;
   assetCode?: string;
   amount?: string;
   lang?: string;
+  sep9?: Sep9Fields;
 }): Promise<Sep24InteractiveResponse> {
   const server = await getTransferServer(params.moneyGramDomain);
   const body: Record<string, string> = {
+    account: params.account,
     asset_code: params.assetCode || 'USDC',
     lang: params.lang || 'en',
   };
   if (params.amount) body.amount = params.amount;
+  if (params.sep9) {
+    for (const [key, value] of Object.entries(params.sep9)) {
+      if (value) body[key] = value;
+    }
+  }
 
   const res = await fetch(`${server}/transactions/${params.kind}/interactive`, {
     method: 'POST',
@@ -111,7 +120,7 @@ export async function submitWithdrawPayment(params: {
     builder = builder.addMemo(Memo.text(transaction.withdraw_memo));
   }
 
-  const tx = builder.setTimeout(300).build();
+  const tx = builder.setTimeout(180).build();
   const signedXdr = await params.signTransactionXdr(tx.toXDR(), params.userPublicKey);
 
   return submitViaRelayer(signedXdr);

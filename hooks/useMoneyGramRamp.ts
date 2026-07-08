@@ -17,6 +17,8 @@ import {
   MONEYGRAM_CLIENT_COSIGN,
   MONEYGRAM_MOCK,
 } from '@/lib/moneygram/config';
+import type { MoneyGramRampMessage } from '@/lib/moneygram/post-message';
+import { buildSep9FromPrivyUser } from '@/lib/moneygram/sep9';
 import type { Sep24Transaction } from '@/lib/moneygram/types';
 import { WALLET_PREPARING_LABEL } from '@/lib/wallet-setup';
 
@@ -36,8 +38,12 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isWithdrawReady(tx: Sep24Transaction) {
+  return tx.status === 'pending_user_transfer_complete' || tx.status === 'completed';
+}
+
 export function useMoneyGramRamp(kind: RampKind) {
-  const { ready, authenticated, login } = usePrivy();
+  const { ready, authenticated, login, user } = usePrivy();
   const { address, walletReady, preparing, setupError } = useStellarWallet();
   const { signTransactionXdr } = useSignStellarTx();
 
@@ -47,7 +53,9 @@ export function useMoneyGramRamp(kind: RampKind) {
   const [transaction, setTransaction] = useState<Sep24Transaction | null>(null);
 
   const authTokenRef = useRef<string | null>(null);
+  const txIdRef = useRef<string | null>(null);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const withdrawSubmittedRef = useRef<string | null>(null);
 
   const stopPolling = useCallback(() => {
     if (pollTimerRef.current) {
@@ -69,6 +77,41 @@ export function useMoneyGramRamp(kind: RampKind) {
     return json.transaction;
   }, []);
 
+  const trySubmitWithdraw = useCallback(
+    async (tx: Sep24Transaction, txId: string, token: string) => {
+      if (kind !== 'withdraw' || tx.status !== 'pending_user_transfer_start') return;
+      if (withdrawSubmittedRef.current === tx.id) return;
+      if (!address) {
+        setStep('error');
+        setError('Wallet not ready');
+        return;
+      }
+
+      withdrawSubmittedRef.current = tx.id;
+      stopPolling();
+      setStep('sending');
+      setInteractiveUrl(null);
+
+      try {
+        await submitWithdrawPayment({
+          userPublicKey: address,
+          transaction: tx,
+          signTransactionXdr,
+        });
+        setStep('polling');
+        pollTimerRef.current = setInterval(() => {
+          void pollTransaction(txId, token);
+        }, 3000);
+        void pollTransaction(txId, token);
+      } catch (sendErr) {
+        withdrawSubmittedRef.current = null;
+        setStep('error');
+        setError(sendErr instanceof Error ? sendErr.message : 'Withdraw payment failed');
+      }
+    },
+    [address, kind, signTransactionXdr, stopPolling],
+  );
+
   const pollTransaction = useCallback(
     async (txId: string, token: string) => {
       const domain = getMoneyGramDomain();
@@ -79,13 +122,6 @@ export function useMoneyGramRamp(kind: RampKind) {
       });
       setTransaction(tx);
 
-      if (tx.status === 'completed') {
-        stopPolling();
-        setStep('completed');
-        setInteractiveUrl(null);
-        return;
-      }
-
       if (tx.status === 'error' || tx.status === 'expired') {
         stopPolling();
         setStep('error');
@@ -95,27 +131,45 @@ export function useMoneyGramRamp(kind: RampKind) {
       }
 
       if (kind === 'withdraw' && tx.status === 'pending_user_transfer_start') {
+        await trySubmitWithdraw(tx, txId, token);
+        return;
+      }
+
+      if (kind === 'withdraw' && isWithdrawReady(tx)) {
         stopPolling();
-        setStep('sending');
+        setStep('completed');
         setInteractiveUrl(null);
-        try {
-          if (!address) throw new Error('Wallet not ready');
-          await submitWithdrawPayment({
-            userPublicKey: address,
-            transaction: tx,
-            signTransactionXdr,
-          });
-          setStep('polling');
-          pollTimerRef.current = setInterval(() => {
-            void pollTransaction(txId, token);
-          }, 3000);
-        } catch (sendErr) {
-          setStep('error');
-          setError(sendErr instanceof Error ? sendErr.message : 'Withdraw payment failed');
-        }
+        return;
+      }
+
+      if (kind === 'deposit' && tx.status === 'completed') {
+        stopPolling();
+        setStep('completed');
+        setInteractiveUrl(null);
       }
     },
-    [address, kind, signTransactionXdr, stopPolling],
+    [kind, stopPolling, trySubmitWithdraw],
+  );
+
+  const handleRampMessage = useCallback(
+    (message: MoneyGramRampMessage) => {
+      const token = authTokenRef.current;
+      const txId = txIdRef.current;
+      if (!token || !txId) return;
+
+      if (message.transaction) {
+        setTransaction(message.transaction);
+        if (kind === 'withdraw' && message.transaction.status === 'pending_user_transfer_start') {
+          void trySubmitWithdraw(message.transaction, txId, token);
+        }
+      }
+
+      if (message.shouldClose) {
+        setInteractiveUrl(null);
+        if (step === 'interactive') setStep('polling');
+      }
+    },
+    [kind, step, trySubmitWithdraw],
   );
 
   const startRamp = useCallback(
@@ -123,6 +177,9 @@ export function useMoneyGramRamp(kind: RampKind) {
       setError(null);
       setTransaction(null);
       stopPolling();
+      withdrawSubmittedRef.current = null;
+      txIdRef.current = null;
+      authTokenRef.current = null;
 
       if (!ready || !authenticated) {
         login();
@@ -161,16 +218,12 @@ export function useMoneyGramRamp(kind: RampKind) {
         const domain = getMoneyGramDomain();
         await getSep24Info(domain);
 
-        const useClientCosign = MONEYGRAM_CLIENT_COSIGN;
-
-        const appDomain = getAppDomain();
-
         const token = await getSep10Token({
           moneyGramDomain: domain,
           userPublicKey: address,
-          appDomain,
+          appDomain: getAppDomain(),
           signTransactionXdr,
-          cosignTransactionXdr: useClientCosign ? cosignTransactionXdr : undefined,
+          cosignTransactionXdr: MONEYGRAM_CLIENT_COSIGN ? cosignTransactionXdr : undefined,
         });
         authTokenRef.current = token;
 
@@ -179,9 +232,12 @@ export function useMoneyGramRamp(kind: RampKind) {
           moneyGramDomain: domain,
           authToken: token,
           kind: kind === 'deposit' ? 'deposit' : 'withdraw',
+          account: address,
           amount,
+          sep9: buildSep9FromPrivyUser(user),
         });
 
+        txIdRef.current = interactive.id;
         setInteractiveUrl(interactive.url);
         setStep('interactive');
 
@@ -208,17 +264,18 @@ export function useMoneyGramRamp(kind: RampKind) {
     },
     [
       address,
-      preparing,
-      setupError,
-      walletReady,
       authenticated,
       cosignTransactionXdr,
       kind,
       login,
       pollTransaction,
+      preparing,
       ready,
+      setupError,
       signTransactionXdr,
       stopPolling,
+      user,
+      walletReady,
     ],
   );
 
@@ -236,6 +293,8 @@ export function useMoneyGramRamp(kind: RampKind) {
     setInteractiveUrl(null);
     setTransaction(null);
     authTokenRef.current = null;
+    txIdRef.current = null;
+    withdrawSubmittedRef.current = null;
   }, [stopPolling]);
 
   return {
@@ -246,6 +305,7 @@ export function useMoneyGramRamp(kind: RampKind) {
     startRamp,
     reset,
     dismissInteractive,
+    handleRampMessage,
     isMock: MONEYGRAM_MOCK,
     appDomain: getAppDomain(),
     moneyGramDomain: getMoneyGramDomain(),

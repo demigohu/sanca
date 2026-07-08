@@ -71,7 +71,19 @@ export default function TopUpPage() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">Testnet sandbox limits may apply.</p>
+              <p className="text-xs text-muted-foreground">
+                Testnet sandbox: search for EXT locations like &quot;CUB FOODS SILVER LAKE&quot; (US)
+                in the MoneyGram UI. See{' '}
+                <a
+                  href="https://developer.moneygram.com/moneygram-developer/docs/on-ramp-cash-in-location-test-data"
+                  className="underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  sandbox location test data
+                </a>
+                .
+              </p>
             </div>
 
             <div className="flex gap-3">
@@ -141,7 +153,7 @@ export default function TopUpPage() {
         url={ramp.interactiveUrl}
         step={ramp.step}
         onClose={ramp.dismissInteractive}
-        onInteractiveMessage={ramp.dismissInteractive}
+        onRampMessage={ramp.handleRampMessage}
       />
     </div>
   );
