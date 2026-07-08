@@ -196,9 +196,9 @@ export function useMoneyGramRamp(kind: RampKind) {
           setError(
             `${message} — set MONEYGRAM_CLIENT_SIGNING_SECRET on the server (Vercel env).`,
           );
-        } else if (message.toLowerCase().includes('domain')) {
+        } else if (message.toLowerCase().includes('client_domain')) {
           setError(
-            `${message} — APP_DOMAIN must match MoneyGram allowlist exactly (www.sanca.space).`,
+            `${message} — ensure NEXT_PUBLIC_MONEYGRAM_CLIENT_COSIGN=true and domain matches MoneyGram allowlist.`,
           );
         } else {
           setError(message);

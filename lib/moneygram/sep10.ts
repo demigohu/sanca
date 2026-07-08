@@ -16,13 +16,17 @@ export async function getSep10Token(params: {
 
   const authEndpoint = toml.WEB_AUTH_ENDPOINT;
   const networkPassphrase = toml.NETWORK_PASSPHRASE || NETWORK_PASSPHRASE;
+  const webAuthDomain = new URL(authEndpoint).hostname;
+  const useClientDomain = Boolean(params.cosignTransactionXdr);
 
   const qs = new URLSearchParams({
     account: params.userPublicKey,
-    home_domain: params.appDomain,
   });
-  if (params.cosignTransactionXdr) {
+  // MoneyGram non-custodial: allowlist is on client_domain only — home_domain is rejected.
+  if (useClientDomain) {
     qs.set('client_domain', params.appDomain);
+  } else {
+    qs.set('home_domain', params.appDomain);
   }
 
   const challengeRes = await fetch(`${authEndpoint}?${qs.toString()}`);
@@ -36,12 +40,15 @@ export async function getSep10Token(params: {
     throw new Error(challengeJson.error || 'Failed to fetch SEP-10 challenge from MoneyGram');
   }
 
+  // With client_domain, MoneyGram sets the challenge home op to the anchor domain.
+  const challengeHomeDomain = useClientDomain ? params.moneyGramDomain : params.appDomain;
+
   WebAuth.readChallengeTx(
     challengeJson.transaction,
     toml.SIGNING_KEY,
     challengeJson.network_passphrase || networkPassphrase,
-    params.appDomain,
-    new URL(authEndpoint).hostname,
+    challengeHomeDomain,
+    webAuthDomain,
   );
 
   let signedXdr = await params.signTransactionXdr(
