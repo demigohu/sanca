@@ -12,7 +12,7 @@ import {
   submitWithdrawPayment,
 } from '@/lib/moneygram/sep24';
 import {
-  APP_DOMAIN,
+  getAppDomain,
   getMoneyGramDomain,
   MONEYGRAM_CLIENT_COSIGN,
   MONEYGRAM_MOCK,
@@ -163,10 +163,12 @@ export function useMoneyGramRamp(kind: RampKind) {
 
         const useClientCosign = MONEYGRAM_CLIENT_COSIGN;
 
+        const appDomain = getAppDomain();
+
         const token = await getSep10Token({
           moneyGramDomain: domain,
           userPublicKey: address,
-          appDomain: APP_DOMAIN,
+          appDomain,
           signTransactionXdr,
           cosignTransactionXdr: useClientCosign ? cosignTransactionXdr : undefined,
         });
@@ -245,7 +247,7 @@ export function useMoneyGramRamp(kind: RampKind) {
     reset,
     dismissInteractive,
     isMock: MONEYGRAM_MOCK,
-    appDomain: APP_DOMAIN,
+    appDomain: getAppDomain(),
     moneyGramDomain: getMoneyGramDomain(),
     walletPreparing: preparing,
     walletReady,
