@@ -4,7 +4,6 @@ import {
   USDC_ASSET_CODE,
   USDC_SCALE,
 } from './stellar';
-import { MONEYGRAM_USDC_ISSUER } from './moneygram/config';
 
 type HorizonBalance = {
   asset_type?: string;
@@ -14,7 +13,7 @@ type HorizonBalance = {
 };
 
 export type UsdcBalanceLine = {
-  id: 'blend' | 'circle';
+  id: 'blend';
   label: string;
   issuer: string;
   purpose: string;
@@ -22,20 +21,12 @@ export type UsdcBalanceLine = {
   hasTrustline: boolean;
 };
 
-const USDC_LINES: Omit<UsdcBalanceLine, 'balanceStroops' | 'hasTrustline'>[] = [
-  {
-    id: 'blend',
-    label: 'Blend USDC',
-    issuer: POOL_USDC_ISSUER,
-    purpose: 'Sanca pools & DeFindex',
-  },
-  {
-    id: 'circle',
-    label: 'Circle USDC',
-    issuer: MONEYGRAM_USDC_ISSUER,
-    purpose: 'MoneyGram top up / cash out',
-  },
-];
+const USDC_LINE: Omit<UsdcBalanceLine, 'balanceStroops' | 'hasTrustline'> = {
+  id: 'blend',
+  label: 'Blend USDC',
+  issuer: POOL_USDC_ISSUER,
+  purpose: 'Sanca pools, DeFindex & Coridor ramp',
+};
 
 function balanceToStroops(balance: string): bigint {
   const n = Number.parseFloat(balance);
@@ -63,11 +54,7 @@ function lineForIssuer(
 }
 
 export async function fetchUsdcBalances(address: string): Promise<UsdcBalanceLine[]> {
-  const empty = USDC_LINES.map((meta) => ({
-    ...meta,
-    balanceStroops: BigInt(0),
-    hasTrustline: false,
-  }));
+  const empty = [{ ...USDC_LINE, balanceStroops: BigInt(0), hasTrustline: false }];
 
   const res = await fetch(`${HORIZON_URL}/accounts/${address}`);
   if (res.status === 404) return empty;
@@ -77,9 +64,7 @@ export async function fetchUsdcBalances(address: string): Promise<UsdcBalanceLin
 
   const data = (await res.json()) as { balances?: HorizonBalance[] };
   const balances = data.balances ?? [];
+  const { balanceStroops, hasTrustline } = lineForIssuer(balances, USDC_LINE.issuer);
 
-  return USDC_LINES.map((meta) => {
-    const { balanceStroops, hasTrustline } = lineForIssuer(balances, meta.issuer);
-    return { ...meta, balanceStroops, hasTrustline };
-  });
+  return [{ ...USDC_LINE, balanceStroops, hasTrustline }];
 }

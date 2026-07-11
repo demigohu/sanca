@@ -33,7 +33,7 @@ export const HORIZON_URL =
   (process.env.NEXT_PUBLIC_NETWORK === 'public'
     ? 'https://horizon.stellar.org'
     : 'https://horizon-testnet.stellar.org');
-/** Stellar USDC SAC (testnet + mainnet MoneyGram) uses 7 decimals. */
+/** Stellar Blend USDC uses 7 decimals. */
 export const USDC_DECIMALS = Number(process.env.NEXT_PUBLIC_USDC_DECIMALS ?? '7');
 export const USDC_SCALE = 10 ** USDC_DECIMALS;
 export const RELAYER_URL = process.env.NEXT_PUBLIC_RELAYER_URL || 'http://localhost:3001';

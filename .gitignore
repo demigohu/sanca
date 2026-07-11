@@ -35,3 +35,6 @@ contracts/target/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# archived integrations (local only)
+_archive/

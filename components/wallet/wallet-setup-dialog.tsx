@@ -14,7 +14,7 @@ import type { WalletSetupPhase } from '@/lib/stellar-wallet-context';
 const STEPS: { key: WalletSetupPhase; label: string }[] = [
   { key: 'creating', label: 'Create your wallet' },
   { key: 'sponsoring', label: 'Activate on Stellar' },
-  { key: 'trustline', label: 'Enable USDC (Blend + MoneyGram)' },
+  { key: 'trustline', label: 'Enable USDC (Blend)' },
 ];
 
 function stepIndex(phase: WalletSetupPhase): number {

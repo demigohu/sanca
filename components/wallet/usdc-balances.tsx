@@ -36,12 +36,12 @@ export function UsdcBalancesCard({ className }: { className?: string }) {
           </p>
           <p className="text-3xl font-bold font-mono text-foreground">${formatUSDC(total)}</p>
         </div>
-        <p className="text-xs text-muted-foreground text-right max-w-[12rem]">
-          Blend = pools · Circle = MoneyGram
-        </p>
+          <p className="text-xs text-muted-foreground text-right max-w-[12rem]">
+            Blend USDC · pools & Coridor ramp
+          </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {data.map((line) => (
           <div
             key={line.id}

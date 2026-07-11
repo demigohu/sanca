@@ -1,7 +1,7 @@
 # Sanca — Product Requirements Document (PRD)
 
-> **Versi:** 1.0  
-> **Tanggal:** 4 Juli 2026  
+> **Versi:** 1.1  
+> **Tanggal:** 8 Juli 2026  
 > **Status:** Active — APAC Stellar Hackathon 2026  
 > **Track:** Local Finance & Real World Access ($20,000)  
 > **Deadline submission:** 15 Juli 2026  
@@ -44,15 +44,15 @@
 
 ## 1. Executive Summary
 
-**Sanca** adalah aplikasi tabungan komunitas (arisan / ROSCA) yang terasa seperti aplikasi web2, tetapi berjalan di atas Stellar smart contracts. User login dengan email/social, top up dan cash out dengan fiat via MoneyGram, ikut savings circle, dan otomatis mendapat yield dari DeFindex vault. Pemenang setiap periode dipilih secara adil dengan drand verifiable randomness.
+**Sanca** adalah aplikasi tabungan komunitas (arisan / ROSCA) yang terasa seperti aplikasi web2, tetapi berjalan di atas Stellar smart contracts. User login dengan email/social, top up dan cash out dengan fiat via Coridor, ikut savings circle, dan otomatis mendapat yield dari DeFindex vault. Pemenang setiap periode dipilih secara adil dengan drand verifiable randomness.
 
 **Tagline:** *"Tabungan komunitas Indonesia, sekarang berhadiah DeFi."*
 
 **One-sentence pitch (submission):**
 
-> Sanca brings Indonesia's community savings circles (arisan) on-chain with a web2 mobile UX — using Privy embedded wallets, fee-bump relayers, DeFindex yield vaults, MoneyGram fiat ramps, and drand verifiable randomness on Stellar.
+> Sanca brings Indonesia's community savings circles (arisan) on-chain with a web2 mobile UX — using Privy embedded wallets, fee-bump relayers, DeFindex yield vaults, Coridor fiat ramps, and drand verifiable randomness on Stellar.
 
-### Status Proyek (6 Juli 2026 — update malam)
+### Status Proyek (8 Juli 2026)
 
 | Komponen | Status | Catatan |
 |----------|--------|---------|
@@ -64,9 +64,8 @@
 | Relayer / fee-bump service | ✅ Done | Express POST `/relay`; method whitelist; factory pool registry |
 | Frontend (Next.js root) | 🟡 In progress | Privy + Soroban hooks; circles/dashboard/profile |
 | Privy embedded wallet | ✅ Done | Login email/social; Stellar embedded wallet; relayer signing |
-| MoneyGram Ramps | 🟡 Mock | `/topup`, `/cashout` + SEP-10 co-sign API; live anchor butuh allowlist |
-| `stellar.toml` + CORS | ✅ Done | `public/.well-known/stellar.toml`; header di `next.config.mjs` |
-| Indexer / event polling | ✅ Tidak perlu | Frontend baca langsung Soroban RPC simulate |
+| Coridor Ramps | ✅ Done | `/topup`, `/cashout`, SEP-10/24, Blend USDC |
+| MoonPay Ramps | 📦 Archived | Geo-block Indonesia; `_archive/moonpay/` (local only) |
 | Demo video & pitch deck | ❌ Not started | Due ~14 Juli |
 
 > **Redeploy wajib** setelah refactor keeper + yield split (factory WASM baru). Pool lama tidak compatible.
@@ -95,9 +94,14 @@
 - ✅ Keeper: discover pools dari factory, bukan `POOL_ADDRESS` per pool
 - ✅ Relayer: fee-bump inner tx dari Privy wallet
 
-**MoneyGram (mock-first)**
-- ✅ `/topup`, `/cashout`, `lib/moneygram/*`, `app/api/moneygram/cosign`
-- ⏸ Live SEP-24 butuh `SIGNING_KEY` + MoneyGram allowlist
+**Coridor (fiat ramp — primary)**
+- ✅ `/topup`, `/cashout`, `lib/coridor/*`, `hooks/useCoridorRamp`
+- ✅ SEP-10 auth + SEP-24 interactive iframe (`api.coridor.fun`)
+- ✅ Withdraw auto-send Blend USDC + memo via relayer
+- ✅ Same USDC issuer as Sanca pools — no swap after top-up
+
+**MoonPay (archived — local only)**
+- 📦 `_archive/moonpay/` — geo-block Indonesia
 
 **Belum / perlu setelah redeploy kamu**
 - 🔲 Update `NEXT_PUBLIC_FACTORY_ADDRESS` ke factory baru
@@ -107,13 +111,21 @@
 
 > **Backend sudah selesai.** Keeper + relayer = seluruh backend off-chain Sanca.
 
-> **MoneyGram live:** defer sampai E2E lokal OK. Demo bisa pakai mock top-up.
+> **Coridor live:** anchor at `sep.coridor.fun` · widget `api.coridor.fun` · sandbox: Simulate di widget.
+
+### Progress log (11 Juli 2026)
+
+**Ramp pivot: MoonPay → Coridor (self-hosted anchor)**
+- ✅ `lib/coridor/` SEP-10/24 + interactive widget
+- ✅ Blend USDC only — top-up langsung bisa join arisan
+- ✅ Relayer allows Blend USDC payments (Coridor withdraw)
+- ✅ `www.sanca.space` added to Coridor `clients.yaml`
 
 ### Tim
 
 | Role | Fokus |
 |------|-------|
-| **Developer A** (smart contract + backend) | Contracts, keeper, relayer, Privy signing flow, MoneyGram backend |
+| **Developer A** (smart contract + backend) | Contracts, keeper, relayer, Privy signing flow, Coridor SEP-10/24 |
 | **Developer B** (frontend) | Port UI Sanca lama → Stellar + Privy, halaman user-facing |
 
 ---
@@ -145,7 +157,7 @@ Di Indonesia dan APAC, **arisan** (ROSCA) adalah mekanisme tabungan komunitas ya
 |--------|---------------------|
 | **Real-world fit (25%)** | Arisan = primitif keuangan nyata APAC |
 | **Stellar strengths** | SAC USDC, DeFindex composability, fee-bump, fast settlement |
-| **MoneyGram** | Fiat on/off-ramp untuk user non-crypto |
+| **Coridor** | Fiat on/off-ramp untuk user non-crypto (IDR via VA/QRIS/OVO → Blend USDC) |
 | **Privy** | Email/social login tanpa seed phrase |
 | **DeFindex** | Yield otomatis tanpa buat vault sendiri |
 | **drand** | Randomness verifiable, fair winner selection |
@@ -157,7 +169,7 @@ Sanca **bukan** generic DeFi vault atau payment app. Kombinasi unik:
 1. ROSCA lifecycle lengkap on-chain (collateral lock → cycles → liquidation → withdraw)
 2. Yield-bearing collateral via DeFindex (bukan idle cash)
 3. drand VRF untuk shuffle winner order
-4. Web2 UX: Privy + relayer + MoneyGram (user tidak perlu XLM atau seed phrase)
+4. Web2 UX: Privy + relayer + Coridor (user tidak perlu XLM atau seed phrase)
 5. Positioning lokal: arisan Indonesia, saldo IDR, Bahasa Indonesia
 
 ---
@@ -184,7 +196,7 @@ Membuktikan bahwa arisan on-chain di Stellar bisa:
 | User | Komunitas arisan Indonesia — ibu-ibu RT, koperasi, komunitas online |
 | Problem | Trust + enforcement + yield + transparency |
 | Solution | Smart contract ROSCA + fiat ramp + embedded wallet |
-| Composability | DeFindex vault, MoneyGram anchor, Privy wallet, drand |
+| Composability | DeFindex vault, Coridor ramp, Privy wallet, drand |
 | Demo | Full flow: login → top up → join → contribute → menang → cash out |
 
 ---
@@ -198,7 +210,7 @@ Membuktikan bahwa arisan on-chain di Stellar bisa:
 | G1 | Smart contract production-ready di testnet | Full lifecycle pass, ≥21 unit tests, BLS + liquidation E2E |
 | G2 | Full E2E demo di testnet | 1 user journey tanpa error di demo path |
 | G3 | Web2 UX | Login email, no seed phrase, no XLM required |
-| G4 | MoneyGram integration | Real staging **atau** mock flow yang meyakinkan |
+| G4 | Coridor integration | Live widget **atau** mock flow yang meyakinkan |
 | G5 | Submission materials | Video ≤5 min, README, pitch deck, repo public |
 
 ### 4.2 Secondary Goals
@@ -214,7 +226,7 @@ Membuktikan bahwa arisan on-chain di Stellar bisa:
 | Kriteria | Bobot | How Sanca Delivers | Target Score |
 |----------|-------|-------------------|--------------|
 | Technical + Stellar usage | 25% | Soroban, SAC, DeFindex, fee-bump, drand, Privy | High |
-| Real-world fit | 25% | Arisan Indonesia, MoneyGram, komunitas nyata | High |
+| Real-world fit | 25% | Arisan Indonesia, Coridor IDR, komunitas nyata | High |
 | Innovation | 20% | drand + yield ROSCA + relayer + embedded wallet | High |
 | UX & accessibility | 5% | Email login, IDR, no crypto jargon | Medium-High |
 | Viability & GTM | 10% | Pilot komunitas, revenue dari yield fee | Medium |
@@ -227,7 +239,7 @@ Membuktikan bahwa arisan on-chain di Stellar bisa:
 | Demo duration | ≤5 menit live |
 | Demo failure rate | 0% pada happy path |
 | Contract calls shown | create_pool, join, contribute, settle_cycle, withdraw |
-| Integrations shown | Privy login, relayer (no XLM), DeFindex yield, MoneyGram top-up |
+| Integrations shown | Privy login, relayer (no XLM), DeFindex yield, Coridor top-up |
 | Unique selling moment | "User menang cycle + dapat yield bonus" |
 
 ---
@@ -246,7 +258,7 @@ Membuktikan bahwa arisan on-chain di Stellar bisa:
 | Pain | Takut organizer kabur, lupa setor, undian curang |
 | Device | Android, mobile web |
 
-**User story:** Sari login dengan Google, top up Rp 500.000 via MoneyGram, join circle "Arisan RT 05" (10 member × Rp 50.000/minggu), contribute otomatis setiap minggu, menang di minggu ke-3 dan dapat payout + bonus yield.
+**User story:** Sari login dengan Google, top up Rp 500.000 via Coridor, join circle "Arisan RT 05" (10 member × Rp 50.000/minggu), contribute otomatis setiap minggu, menang di minggu ke-3 dan dapat payout + bonus yield.
 
 ### 5.2 Secondary Persona: **Budi — Circle Creator**
 
@@ -281,7 +293,7 @@ Membuktikan bahwa arisan on-chain di Stellar bisa:
 | Relayer | Fee-bump untuk user tx (join, contribute, withdraw, create_pool) |
 | Privy | Email/social login, embedded Stellar wallet, sign inner tx |
 | Frontend | Port UI lama: landing, dashboard, circle detail, create/join/contribute |
-| MoneyGram | SEP-10 + SEP-24 flow (real staging **or** high-fidelity mock) |
+| Coridor | SEP-10/24 top-up & cash-out + iframe widget (live **or** mock) |
 | Demo | Full E2E testnet demo + video |
 | Docs | README, architecture, setup guide |
 
@@ -305,7 +317,7 @@ Membuktikan bahwa arisan on-chain di Stellar bisa:
 | Multi-asset pools (non-USDC) | Complexity; USDC only |
 | AI keeper / volatility rebalancing | Future feature |
 | Mobile native app | Mobile web sufficient |
-| KYC/AML beyond MoneyGram | Delegate to MoneyGram |
+| KYC/AML beyond Coridor anchor | Delegate to anchor / payment partner |
 | SubQuery indexer | Overkill for hackathon |
 | Multi-language (beyond ID + EN) | ID primary, EN for juri |
 
@@ -524,9 +536,9 @@ Tanpa penjelasan UI, countdown / "Created" / cycle labels terasa **ambigu** — 
 | FR-2.1 | "Isi Saldo" button di dashboard | P0 | ✅ (`/topup`) |
 | FR-2.2 | User input amount in IDR | P0 | 🟡 mock |
 | FR-2.3 | Show estimated USDC amount | P0 | 🟡 mock |
-| FR-2.4 | Initiate MoneyGram SEP-24 deposit flow | P0 | 🟡 mock |
-| FR-2.5 | Redirect to MoneyGram webview for KYC + payment | P0 | ⏸ live |
-| FR-2.6 | On success, USDC credited to Privy wallet | P0 | ⏸ live |
+| FR-2.4 | Open Coridor deposit widget (SEP-24 interactive) | P0 | ✅ |
+| FR-2.5 | Coridor widget: VA / QRIS / OVO (Xendit sandbox) | P0 | ✅ |
+| FR-2.6 | On success, USDC credited to Privy wallet | P0 | ✅ |
 | FR-2.7 | Show updated balance in dashboard | P0 | 🟡 |
 | FR-2.8 | Fallback mock flow if staging not available | P0 | ✅ |
 
@@ -541,8 +553,8 @@ Tanpa penjelasan UI, countdown / "Created" / cycle labels terasa **ambigu** — 
 | FR-3.1 | "Tarik Saldo" button di dashboard | P0 | ✅ (`/cashout`) |
 | FR-3.2 | User input USDC amount to withdraw | P0 | 🟡 mock |
 | FR-3.3 | Show estimated IDR payout | P0 | 🟡 mock |
-| FR-3.4 | Initiate MoneyGram SEP-24 withdrawal flow | P0 | 🟡 mock |
-| FR-3.5 | User selects pickup/bank method in MoneyGram UI | P1 | ⏸ live |
+| FR-3.4 | Open Coridor withdraw widget (SEP-24 interactive) | P0 | ✅ |
+| FR-3.5 | Auto-send Blend USDC + Stellar memo to anchor via relayer | P0 | ✅ |
 | FR-3.6 | Fallback mock flow if staging not available | P0 | ✅ |
 
 **Acceptance:** User bisa tarik USDC ke fiat (real atau mock) setelah menerima payout.
@@ -725,7 +737,7 @@ Tanpa penjelasan UI, countdown / "Created" / cycle labels terasa **ambigu** — 
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    Next.js Frontend (Port dari Sanca lama)           │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐  │
-│  │ Privy Auth   │  │ Circle UI    │  │ MoneyGram SEP-24 Webview   │  │
+│  │ Privy Auth   │  │ Circle UI    │  │ Coridor SEP-24 Widget      │  │
 │  │ Login        │  │ Dashboard    │  │ Top Up / Cash Out          │  │
 │  └──────┬───────┘  └──────┬───────┘  └────────────┬─────────────┘  │
 │         │                 │                       │                 │
@@ -737,9 +749,9 @@ Tanpa penjelasan UI, countdown / "Created" / cycle labels terasa **ambigu** — 
           ┌───────────────┼───────────────┐
           ▼               ▼               ▼
    ┌────────────┐  ┌────────────┐  ┌──────────────┐
-   │  Relayer   │  │  Keeper    │  │ MoneyGram    │
-   │  Service   │  │  Service   │  │ Anchor API   │
-   │  (fee-bump)│  │  (settle)  │  │ (SEP-10/24)  │
+   │  Relayer   │  │  Keeper    │  │ Coridor API  │
+   │  Service   │  │  Service   │  │ (SEP-24)     │
+   │  (fee-bump)│  │  (settle)  │  │              │
    └─────┬──────┘  └─────┬──────┘  └──────────────┘
          │               │
          └───────┬───────┘
@@ -764,7 +776,7 @@ Tanpa penjelasan UI, countdown / "Created" / cycle labels terasa **ambigu** — 
 
 | Service | Port | Owner | Responsibility |
 |---------|------|-------|----------------|
-| Frontend | 3000 | Dev B | UX, Privy, tx building, MoneyGram UI |
+| Frontend | 3000 | Dev B | UX, Privy, tx building, Coridor widgets |
 | Relayer | 3001 | Dev A | Fee-bump user transactions |
 | Keeper | 3002 | Dev A | Auto settle_cycle |
 | Stellar RPC | external | — | `https://soroban-testnet.stellar.org` |
@@ -984,8 +996,8 @@ POLL_INTERVAL_MS=15000
 | `/circles` | Browse all circles | P0 | Port |
 | `/circles/create` | Create circle form | P0 | Port |
 | `/circles/[id]` | Circle detail, join, contribute, status | P0 | Port |
-| `/topup` | MoneyGram top up flow | P0 | New |
-| `/cashout` | MoneyGram cash out flow | P0 | New |
+| `/topup` | Coridor deposit (IDR → Blend USDC) | P0 | ✅ |
+| `/cashout` | Coridor withdraw (Blend USDC → IDR) | P0 | ✅ |
 | `/activity` | Transaction history | P1 | Port |
 | `/profile` | Account, wallet address | P2 | Port |
 
@@ -997,7 +1009,8 @@ POLL_INTERVAL_MS=15000
 | Contract calls | Soroban invoke via stellar-sdk |
 | User fees | Fee-bump relayer (no XLM UX) |
 | On-chain reads | Soroban RPC simulate + contract views |
-| USDC | MoneyGram USDC SAC on Stellar (7 decimals) |
+| USDC (pools) | Blend USDC SAC on Stellar (7 decimals) |
+| USDC (ramp) | Blend USDC classic via Coridor (7 decimals) — same issuer as pools |
 | UI | Reuse shadcn components, pages, styling |
 
 **Keep:** Layout, design system, page structure, copy (ID), circle cards, forms.  
@@ -1072,25 +1085,33 @@ async function executeContractCall(params) {
 
 ---
 
-### 14.2 MoneyGram Ramps
+### 14.2 Coridor Ramps (SEP-10 / SEP-24)
 
-| Step | Action | Owner | Due |
-|------|--------|-------|-----|
-| 1 | Email `ramps@moneygram.com` for staging access | Dev A | **Day 1 (TODAY)** |
-| 2 | Setup domain + `stellar.toml` (non-custodial) | Dev A | Day 2 |
-| 3 | Implement SEP-10 auth flow | Dev A | Day 4 |
-| 4 | Implement SEP-24 deposit (top up) | Dev A | Day 5 |
-| 5 | Implement SEP-24 withdrawal (cash out) | Dev A | Day 6 |
-| 6 | **Fallback:** Build mock MoneyGram UI | Dev B | Day 5 |
+| Step | Action | Owner | Status |
+|------|--------|-------|--------|
+| 1 | Configure `NEXT_PUBLIC_CORIDOR_HOME_DOMAIN` + anchor `clients.yaml` | Dev A | ✅ |
+| 2 | `lib/coridor/` — SEP-10 auth (`getSep10Token`) | Dev A | ✅ |
+| 3 | SEP-24 interactive iframe (`/topup`, `/cashout`) | Dev B | ✅ |
+| 4 | Withdraw: auto-send Blend USDC + memo via relayer | Dev A | ✅ |
+| 5 | Mock mode `NEXT_PUBLIC_CORIDOR_MOCK` untuk demo | Dev B | ✅ |
 
-**MoneyGram testnet USDC issuer:** `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`  
-**Note:** MoneyGram testnet USDC ≠ Blend USDC used by DeFindex. User must swap or use separate balance display. Document this in demo script.
+**Coridor endpoints:**
+- SEP-10/24 anchor: `sep.coridor.fun`
+- Widget API: `api.coridor.fun`
+- Payment methods (sandbox): VA, QRIS, OVO via Xendit — gunakan **Simulate** di widget
 
-**Fallback mock requirements:**
-- Looks like real MoneyGram webview (logo, steps, loading)
-- Simulates 3-step flow: amount → confirm → success
-- Credits mock USDC to wallet (or uses testnet faucet)
-- Label internally as demo — juri informed during pitch
+**Blend USDC issuer (testnet):** `GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56`  
+**Keuntungan:** Issuer sama dengan Sanca pools & DeFindex — top-up langsung bisa join arisan, tanpa swap.
+
+**Env vars:**
+
+```bash
+NEXT_PUBLIC_CORIDOR_HOME_DOMAIN=sep.coridor.fun
+NEXT_PUBLIC_CORIDOR_MOCK=false
+NEXT_PUBLIC_POOL_USDC_ISSUER=GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56
+```
+
+**Pitch line for juri:** Settlement 100% Stellar (Soroban, DeFindex, drand); Coridor = fiat rail IDR ↔ Blend USDC untuk user Indonesia.
 
 ---
 
@@ -1188,7 +1209,7 @@ interface PoolSummary {
 
 ```
 Landing → "Mulai dengan Google" → Onboarding (3 slides) → Dashboard (empty)
-→ "Isi Saldo" → MoneyGram → Dashboard (Rp 500.000) → Browse Circles → Join
+→ "Isi Saldo" → Coridor → Dashboard (Rp 500.000) → Browse Circles → Join
 ```
 
 #### Flow B: Contribute
@@ -1203,7 +1224,7 @@ Dashboard → Active Circle card → Circle Detail → "Bayar Cicilan" (enabled)
 ```
 (Push/in-app notification) "Selamat! Kamu menang di Minggu ke-3!"
 → Circle Detail → Show payout: Rp 500.000 + Bonus DeFi Rp 5.000
-→ "Tarik Saldo" → MoneyGram cash out
+→ "Tarik Saldo" → Coridor cash out
 ```
 
 ### 16.3 Error States
@@ -1236,7 +1257,7 @@ Dashboard → Active Circle card → Circle Detail → "Bayar Cicilan" (enabled)
 | Parameter | Default | Range | Notes |
 |-----------|---------|-------|-------|
 | `max_members` | 10 | 2–50 | UI recommendation 5–10 |
-| `contribution_per_period` | 10 USDC | ≥ 5 USDC | Min = MoneyGram minimum |
+| `contribution_per_period` | 10 USDC | ≥ 5 USDC | Min sesuai anchor config |
 | `period_duration` | 7 days | 1/7/14/30 days | 1 day for demo/testnet |
 | `yield_split_bps` | 9000 | 0–10000 | **Factory** — 90% yield ke winner; set saat deploy |
 | `platform_fee_bps` | 1000 | 0–5000 | 10% of yield bonus, set in factory |
@@ -1303,7 +1324,7 @@ After 3 cycles: each member withdraws ~15 USDC + compounded yield share
 
 1. **Drand:** Full BLS12-381 on-chain (CAP-0059); keeper only fetches/decompresses — contract verifies pairing + derives randomness.
 2. **Vault shares:** Per-member accounting via `MemberVaultShares` (not equal split). No SAC receipt token in wallet for hackathon — balance shown in app.
-3. **MoneyGram USDC ≠ Blend USDC** on testnet — separate asset flows.
+3. **Single USDC issuer:** Blend USDC untuk ramp dan pools — tidak perlu swap setelah top-up.
 4. **Drand round timing:** Contract enforces monotonic round, not wall-clock alignment with cycle end.
 5. **Cycle schedule shifts on late settle:** `cycle_start_time` resets to settle ledger time — not a fixed calendar ROSCA schedule. See [§7.7](#77-cycle-timing--keeper-settlement-semantics). Frontend must show **settlement pending** state.
 6. **BLS / crypto:** Soroban example pattern; not independently audited for production.
@@ -1376,7 +1397,7 @@ Pre-demo checklist (run 24h before Demo Day):
 - [ ] Relayer funded with XLM
 - [ ] Keeper running and pool registered
 - [ ] Demo pool created (3 members, 1-day period OR pre-settled pool)
-- [ ] MoneyGram top-up works (or mock ready)
+- [ ] Coridor top-up works (live or mock)
 - [ ] All 3 demo accounts funded with USDC
 - [ ] Frontend deployed to public URL
 - [ ] Video recorded as backup
@@ -1454,11 +1475,11 @@ POLL_INTERVAL_MS=15000
 | 0:00–0:30 | Problem: arisan tradisional, trust issues |
 | 0:30–1:00 | Solution intro: Sanca on Stellar |
 | 1:00–1:30 | Login with Google (Privy) |
-| 1:30–2:00 | Top up via MoneyGram |
+| 1:30–2:00 | Top up via Coridor (IDR → Blend USDC) |
 | 2:00–2:30 | Browse & join savings circle |
 | 2:30–3:00 | Pay contribution (no XLM needed) |
 | 3:00–3:30 | Show cycle settlement + winner + yield bonus |
-| 3:30–4:00 | Cash out via MoneyGram |
+| 3:30–4:00 | Cash out via Coridor |
 | 4:00–4:30 | Architecture: Stellar + DeFindex + drand + Privy |
 | 4:30–5:00 | Closing: APAC real-world finance |
 
@@ -1470,7 +1491,7 @@ POLL_INTERVAL_MS=15000
 4. Demo screenshot
 5. How it works (user flow diagram)
 6. Technology (Stellar stack diagram)
-7. Composability (DeFindex, MoneyGram, Privy, drand)
+7. Composability (DeFindex, Coridor, Privy, drand)
 8. Market (APAC ROSCA market size)
 9. Business model (yield fee)
 10. Roadmap + ask
@@ -1485,7 +1506,7 @@ POLL_INTERVAL_MS=15000
 
 | Task | Owner | Hours | Done? |
 |------|-------|-------|-------|
-| Email MoneyGram for staging | Dev A | 1h | ❌ |
+| Configure Coridor anchor + `clients.yaml` | Dev A | 1h | ✅ |
 | Setup Privy app + Stellar config | Dev A | 2h | ❌ |
 | Create `sanca/relayer/` scaffold | Dev A | 3h | ❌ |
 | Implement `POST /relay` basic fee-bump | Dev A | 4h | ❌ |
@@ -1515,16 +1536,14 @@ POLL_INTERVAL_MS=15000
 
 ---
 
-#### **Phase 2: MoneyGram + Settlement UX (9–11 Juli) — Days 6–8**
+#### **Phase 2: Coridor + Settlement UX (9–11 Juli) — Days 6–8**
 
 | Task | Owner | Hours | Done? |
 |------|-------|-------|-------|
-| SEP-10 auth implementation | Dev A | 4h | ❌ |
-| SEP-24 deposit flow | Dev A | 6h | ❌ |
-| SEP-24 withdrawal flow | Dev A | 4h | ❌ |
-| **Fallback:** Mock MoneyGram UI | Dev B | 6h | ❌ |
-| Top up page | Dev B | 4h | ❌ |
-| Cash out page | Dev B | 4h | ❌ |
+| Coridor SEP-10 auth + SEP-24 interactive | Dev A/B | 6h | ✅ |
+| Coridor withdraw: Blend USDC + memo via relayer | Dev A | 6h | ✅ |
+| Top up page | Dev B | 4h | ✅ |
+| Cash out page | Dev B | 4h | ✅ |
 | IDR display with exchange rate | Dev B | 2h | ❌ |
 | Winner notification UI | Dev B | 2h | ❌ |
 | Withdraw flow in frontend | Dev B | 3h | ❌ |
@@ -1558,7 +1577,7 @@ POLL_INTERVAL_MS=15000
 ```
 Privy login → Relayer fee-bump → Frontend contract calls
      ↓
-MoneyGram (or mock) → Top up USDC
+Coridor (or mock) → Top up USDC
      ↓
 Join + Contribute (full ROSCA flow)
      ↓
@@ -1568,7 +1587,7 @@ Demo video + submission
 ```
 
 **Blocker #1:** Relayer + Privy signing (Days 1–4)  
-**Blocker #2:** MoneyGram staging (parallel track with mock fallback)  
+**Blocker #2:** Coridor anchor uptime + Vercel env (parallel track with mock fallback)  
 **Blocker #3:** Frontend port (Days 1–8, parallel with backend)
 
 ---
@@ -1591,7 +1610,7 @@ Demo video + submission
 | Item | Description |
 |------|-------------|
 | Pilot with real community | 1 arisan group in Yogyakarta |
-| Multi-anchor support | Beyond MoneyGram |
+| Multi-anchor support | Self-hosted Anchor + local payment (QRIS) |
 | Local stablecoins | IDR on-chain via anchor |
 | Push notifications | Cycle reminders |
 | Fixed cycle schedule (v2) | Absolute `pool_start + n×period` — settle late without shifting UX timeline; see §7.7.4 |
@@ -1612,7 +1631,7 @@ Demo video + submission
 
 | # | Risk | Impact | Likelihood | Mitigation |
 |---|------|--------|------------|------------|
-| R1 | MoneyGram staging not approved in time | High | High | Mock flow ready by Day 5; disclose in pitch |
+| R1 | Coridor widget / payment fails in demo | High | Medium | Pre-test IDR flow; mock fallback; record backup video |
 | R2 | Privy Stellar rawSign integration issues | High | Medium | Start Day 1; fallback to Freighter for demo |
 | R3 | Relayer fee-bump Soroban auth complexity | High | Medium | Dev A focuses exclusively Days 1–4 |
 | R4 | DeFindex vault testnet downtime | Medium | Low | Pre-deposit USDC before demo; monitor vault |
@@ -1620,7 +1639,7 @@ Demo video + submission
 | R5a | Late settle shifts cycle timeline (UX confusion) | Medium | Medium | §7.7 UX: settlement pending + explain next cycle starts at settle; v2 fixed schedule |
 | R6 | Frontend port takes longer than expected | Medium | Medium | Prioritize demo path pages only |
 | R7 | 2-person team bandwidth | High | High | Strict scope: no nice-to-haves until Phase 3 |
-| R8 | MoneyGram USDC ≠ Blend USDC mismatch | Medium | Certain | Document in demo; show swap step or separate balances |
+| R8 | Coridor anchor downtime | Medium | Low | Mock mode fallback; health check `api.coridor.fun/health` |
 | R9 | drand API downtime | Low | Low | Cache last beacon; retry logic in keeper |
 | R10 | Testnet ledger timing (60s period too short for live demo) | Medium | Medium | Pre-seed a pool in advance; use 1-day period for live |
 
@@ -1634,7 +1653,7 @@ Demo video + submission
 | Keeper service | **R/A** | I |
 | Relayer service | **R/A** | C |
 | Privy integration | **R** | **A** (UI) |
-| MoneyGram integration | **R/A** | C |
+| Coridor integration | **R/A** | C |
 | Frontend pages | C | **R/A** |
 | Demo video | **R** | **R** |
 | Pitch deck | C | **R** |
@@ -1651,14 +1670,14 @@ Demo video + submission
 
 - [ ] User logs in with Google via Privy
 - [ ] User has embedded Stellar wallet (G-address) without seed phrase
-- [ ] User can top up USDC (MoneyGram real or mock)
+- [ ] User can top up USDC (Coridor live or mock)
 - [ ] User can create a savings circle
 - [ ] User can join a savings circle (collateral locked in DeFindex)
 - [ ] User can contribute to active cycle
 - [ ] Keeper auto-settles cycle on testnet
 - [ ] Winner receives prize + yield bonus
 - [ ] User can withdraw after pool completion
-- [ ] User can cash out USDC (MoneyGram real or mock)
+- [ ] User can cash out USDC (Coridor live or mock)
 - [ ] User never needs XLM (relayer handles fees)
 - [ ] Frontend deployed to public HTTPS URL
 - [ ] Demo video recorded
@@ -1673,7 +1692,7 @@ Demo video + submission
 - [ ] Winner notification in-app
 - [ ] Mobile responsive on all pages
 - [ ] 3 successful demo rehearsals
-- [ ] MoneyGram real staging (not mock)
+- [ ] Coridor live flow tested from Indonesia (not mock)
 - [ ] Pitch deck finalized
 - [ ] ≥21 contract unit tests passing
 
@@ -1731,7 +1750,7 @@ Each feature is done when:
 | Soroban docs | https://soroban.stellar.org |
 | DeFindex | https://defindex.io |
 | Privy docs | https://docs.privy.io |
-| MoneyGram Ramps | Email: ramps@moneygram.com |
+| Coridor anchor | `sep.coridor.fun` / `api.coridor.fun` |
 | drand API | https://api.drand.sh |
 | APAC Hackathon | Stellar community channels |
 
@@ -1748,32 +1767,15 @@ For Demo Day, pre-create a pool before the live presentation:
 
 This avoids waiting for cycle duration during live demo.
 
-### E. MoneyGram Contact Email Template
+### E. Coridor Setup Checklist
 
-```
-Subject: Stellar Testnet Staging Access — Sanca (APAC Hackathon)
-
-Hi MoneyGram Ramps Team,
-
-We are building Sanca, a community savings (ROSCA/arisan) app on Stellar
-for the APAC Stellar Hackathon 2026 (submission deadline: July 15).
-
-We would like to request testnet staging access for SEP-24 deposit/withdrawal flows.
-
-Project: Sanca — community savings circles with DeFi yield
-Network: Stellar Testnet
-Wallet type: Non-custodial (Privy embedded wallet)
-Domain: [your-domain.com]
-Auth wallet: [G-address]
-Deposit/withdraw wallet: [G-address]
-
-Happy to provide any additional information needed.
-
-Thank you,
-[Name]
-[Team]
-```
+1. **Anchor:** Deploy Anchor Platform at `sep.coridor.fun`; widget at `api.coridor.fun`.
+2. **Vercel env:** `NEXT_PUBLIC_CORIDOR_HOME_DOMAIN=sep.coridor.fun`, `NEXT_PUBLIC_CORIDOR_MOCK=false`.
+3. **clients.yaml:** Add `www.sanca.space`, `sanca.space`, `localhost:3000`.
+4. **Test deposit:** Login → `/topup` → Continue with Coridor → VA/QRIS → **Simulate** (Xendit sandbox).
+5. **Test withdraw:** `/cashout` → complete widget → confirm auto USDC + memo via relayer.
+6. **Demo script:** Same Blend USDC for ramp and pools — no swap step needed.
 
 ---
 
-*End of PRD v1.0*
+*End of PRD v1.1*

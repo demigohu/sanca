@@ -1,20 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useCoridorRamp } from '@/hooks/useCoridorRamp';
+import { WALLET_PREPARING_LABEL } from '@/lib/wallet-setup';
+import { CoridorInteractive } from '@/components/coridor/coridor-interactive';
+import ConnectWalletButton from '@/components/wallet/connect-wallet-button';
 import { ArrowDownToLine, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useMoneyGramRamp } from '@/hooks/useMoneyGramRamp';
-import { WALLET_PREPARING_LABEL } from '@/lib/wallet-setup';
-import { MoneyGramInteractive } from '@/components/moneygram/moneygram-interactive';
-import ConnectWalletButton from '@/components/wallet/connect-wallet-button';
 
 export default function TopUpPage() {
-  const [amount, setAmount] = useState('10');
-  const ramp = useMoneyGramRamp('deposit');
+  const ramp = useCoridorRamp('deposit');
 
   const dialogOpen =
     ramp.step === 'interactive' ||
@@ -28,7 +24,7 @@ export default function TopUpPage() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Top Up USDC</h1>
           <p className="text-muted-foreground mt-2">
-            Cash in via MoneyGram Ramps — fiat to USDC on Stellar testnet.
+            Cash in via Coridor — IDR (VA, QRIS, OVO) to Blend USDC on Stellar.
           </p>
         </div>
 
@@ -36,17 +32,17 @@ export default function TopUpPage() {
           <Alert>
             <AlertTitle>Demo mode</AlertTitle>
             <AlertDescription>
-              `NEXT_PUBLIC_MONEYGRAM_MOCK=true` — no real MoneyGram session. Set mock to false
-              after your domain is allowlisted by MoneyGram.
+              `NEXT_PUBLIC_CORIDOR_MOCK=true` — no real Coridor session. Set to false for live
+              sandbox.
             </AlertDescription>
           </Alert>
         )}
 
         <Alert>
-          <AlertTitle>MoneyGram USDC ≠ Pool USDC</AlertTitle>
+          <AlertTitle>Same USDC as pools</AlertTitle>
           <AlertDescription>
-            MoneyGram credits classic USDC (Circle test issuer). Sanca pools use Blend USDC SAC.
-            You may need to swap before joining a circle.
+            Coridor credits Blend USDC — the same asset used by Sanca circles. Top up and join
+            directly, no swap needed.
           </AlertDescription>
         </Alert>
 
@@ -57,34 +53,14 @@ export default function TopUpPage() {
               Deposit
             </CardTitle>
             <CardDescription>
-              Anchor: {ramp.moneyGramDomain} · App domain: {ramp.appDomain}
+              Anchor: {ramp.coridorDomain} · Min Rp 10.000 di widget · Sandbox: Simulate
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount (USDC)</Label>
-              <Input
-                id="amount"
-                type="number"
-                min="5"
-                step="1"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Testnet sandbox: search for EXT locations like &quot;CUB FOODS SILVER LAKE&quot; (US)
-                in the MoneyGram UI. See{' '}
-                <a
-                  href="https://developer.moneygram.com/moneygram-developer/docs/on-ramp-cash-in-location-test-data"
-                  className="underline"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  sandbox location test data
-                </a>
-                .
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Nominal IDR kamu isi di widget Coridor (VA, QRIS, atau OVO). Tidak perlu input di
+              sini.
+            </p>
 
             <div className="flex gap-3">
               <ConnectWalletButton />
@@ -95,14 +71,14 @@ export default function TopUpPage() {
                   ramp.step === 'authenticating' ||
                   ramp.step === 'starting'
                 }
-                onClick={() => void ramp.startRamp(amount)}
+                onClick={() => void ramp.startRamp()}
               >
                 {(ramp.walletPreparing ||
                   ramp.step === 'authenticating' ||
                   ramp.step === 'starting') && (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 )}
-                {ramp.walletPreparing ? WALLET_PREPARING_LABEL : 'Continue with MoneyGram'}
+                {ramp.walletPreparing ? WALLET_PREPARING_LABEL : 'Continue with Coridor'}
               </Button>
             </div>
 
@@ -110,7 +86,9 @@ export default function TopUpPage() {
               <Alert className="border-emerald-500/30 bg-emerald-500/10">
                 <AlertTitle>Deposit complete</AlertTitle>
                 <AlertDescription>
-                  {ramp.transaction.amount_out || ramp.transaction.amount_in} USDC received
+                  {ramp.isMock
+                    ? 'Demo deposit credited (mock).'
+                    : `${ramp.transaction.amount_out || ramp.transaction.amount_in || ''} USDC received`}
                   {ramp.transaction.stellar_transaction_id
                     ? ` · tx ${ramp.transaction.stellar_transaction_id.slice(0, 8)}…`
                     : ''}
@@ -134,26 +112,19 @@ export default function TopUpPage() {
         </Card>
 
         <p className="text-xs text-muted-foreground">
-          Requires SEP-10 auth + allowlisted domain with{' '}
-          <code className="text-foreground">/.well-known/stellar.toml</code>. See{' '}
-          <a
-            href="https://developer.moneygram.com/moneygram-developer/docs/integrate-moneygram-ramps"
-            className="underline"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            MoneyGram Ramps docs
-          </a>
-          .
+          Powered by{' '}
+          <a href="https://coridor.fun" className="underline" target="_blank" rel="noopener noreferrer">
+            Coridor
+          </a>{' '}
+          · SEP-24 on Stellar testnet.
         </p>
       </div>
 
-      <MoneyGramInteractive
+      <CoridorInteractive
         open={dialogOpen}
         url={ramp.interactiveUrl}
         step={ramp.step}
         onClose={ramp.dismissInteractive}
-        onRampMessage={ramp.handleRampMessage}
       />
     </div>
   );

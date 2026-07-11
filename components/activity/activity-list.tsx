@@ -90,7 +90,9 @@ export default function ActivityList({ searchQuery, filterType }: ActivityListPr
   }
 
   // Transform activities data to Activity format
-  const activities: Activity[] = activitiesData.map((activity) => {
+  const activities: Activity[] = activitiesData
+    .filter((activity) => !Number.isNaN(activity.timestamp.getTime()))
+    .map((activity) => {
     const icon = getActivityIcon(activity.type)
     const { color, bgColor } = getActivityColor(activity.type)
     

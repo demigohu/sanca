@@ -1,4 +1,4 @@
-export interface MoneyGramToml {
+export interface CoridorToml {
   WEB_AUTH_ENDPOINT?: string;
   TRANSFER_SERVER_SEP0024?: string;
   SIGNING_KEY?: string;
@@ -40,7 +40,6 @@ export interface Sep24Transaction {
   started_at?: string;
   completed_at?: string;
   stellar_transaction_id?: string;
-  /** Cash-out reference number at MoneyGram agent (withdraw). */
   external_transaction_id?: string;
   withdraw_anchor_account?: string;
   withdraw_memo?: string;
@@ -48,5 +47,3 @@ export interface Sep24Transaction {
   more_info_url?: string;
   message?: string;
 }
-
-export type { Sep9Fields } from './sep9';

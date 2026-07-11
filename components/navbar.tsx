@@ -115,6 +115,13 @@ export default function Navbar() {
                                             Top Up
                                         </span>
                                     </Link>
+                                    <Link href="/cashout">
+                                        <span
+                                            className={`text-sm text-foreground hover:underline ${pathname?.startsWith("/cashout") ? "underline" : ""}`}
+                                        >
+                                            Cash Out
+                                        </span>
+                                    </Link>
                                     <ConnectWalletButton />
                                 </div>
                             </div>
@@ -171,6 +178,13 @@ export default function Navbar() {
                                                 className={`text-sm text-foreground hover:underline ${pathname?.startsWith("/topup") ? "underline" : ""}`}
                                             >
                                                 Top Up
+                                            </span>
+                                        </Link>
+                                        <Link href="/cashout">
+                                            <span
+                                                className={`text-sm text-foreground hover:underline ${pathname?.startsWith("/cashout") ? "underline" : ""}`}
+                                            >
+                                                Cash Out
                                             </span>
                                         </Link>
                                     </div>

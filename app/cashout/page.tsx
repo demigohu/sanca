@@ -1,20 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useCoridorRamp } from '@/hooks/useCoridorRamp';
+import { WALLET_PREPARING_LABEL } from '@/lib/wallet-setup';
+import { CoridorInteractive } from '@/components/coridor/coridor-interactive';
+import ConnectWalletButton from '@/components/wallet/connect-wallet-button';
 import { ArrowUpFromLine, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useMoneyGramRamp } from '@/hooks/useMoneyGramRamp';
-import { WALLET_PREPARING_LABEL } from '@/lib/wallet-setup';
-import { MoneyGramInteractive } from '@/components/moneygram/moneygram-interactive';
-import ConnectWalletButton from '@/components/wallet/connect-wallet-button';
 
 export default function CashOutPage() {
-  const [amount, setAmount] = useState('10');
-  const ramp = useMoneyGramRamp('withdraw');
+  const ramp = useCoridorRamp('withdraw');
 
   const dialogOpen =
     ramp.step === 'interactive' ||
@@ -29,7 +25,7 @@ export default function CashOutPage() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Cash Out USDC</h1>
           <p className="text-muted-foreground mt-2">
-            Withdraw USDC to cash at a MoneyGram location via Stellar SEP-24.
+            Withdraw Blend USDC to IDR via Coridor SEP-24 — transfer to your bank account.
           </p>
         </div>
 
@@ -37,8 +33,8 @@ export default function CashOutPage() {
           <Alert>
             <AlertTitle>Demo mode</AlertTitle>
             <AlertDescription>
-              Mock flow enabled — no real withdrawal. Disable `NEXT_PUBLIC_MONEYGRAM_MOCK` for
-              staging.
+              Mock flow enabled — no real withdrawal. Disable `NEXT_PUBLIC_CORIDOR_MOCK` for live
+              sandbox.
             </AlertDescription>
           </Alert>
         )}
@@ -50,21 +46,13 @@ export default function CashOutPage() {
               Withdraw
             </CardTitle>
             <CardDescription>
-              You will send MoneyGram USDC from your Privy wallet when prompted.
+              USDC amount & bank details di widget Coridor · min ~0.5 USDC
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount (USDC)</Label>
-              <Input
-                id="amount"
-                type="number"
-                min="5"
-                step="1"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Setelah widget selesai, Sanca otomatis kirim USDC + memo ke anchor (fee relayer).
+            </p>
 
             <div className="flex gap-3">
               <ConnectWalletButton />
@@ -76,35 +64,43 @@ export default function CashOutPage() {
                   ramp.step === 'starting' ||
                   ramp.step === 'sending'
                 }
-                onClick={() => void ramp.startRamp(amount)}
+                onClick={() => void ramp.startRamp()}
               >
                 {(ramp.walletPreparing ||
                   ramp.step === 'authenticating' ||
                   ramp.step === 'starting' ||
                   ramp.step === 'sending') && <Loader2 className="mr-2 size-4 animate-spin" />}
-                {ramp.walletPreparing ? WALLET_PREPARING_LABEL : 'Continue with MoneyGram'}
+                {ramp.walletPreparing
+                  ? WALLET_PREPARING_LABEL
+                  : ramp.step === 'sending'
+                    ? 'Sending USDC…'
+                    : 'Continue with Coridor'}
               </Button>
             </div>
 
             {ramp.step === 'sending' && (
               <Alert>
-                <AlertTitle>Sending USDC to MoneyGram</AlertTitle>
+                <AlertTitle>Sending USDC to Coridor</AlertTitle>
                 <AlertDescription>
-                  Signing your withdrawal — network fee covered by Sanca.
+                  Signing your withdrawal — network fee covered by Sanca relayer.
                 </AlertDescription>
               </Alert>
             )}
 
             {ramp.step === 'completed' && ramp.transaction && (
               <Alert className="border-emerald-500/30 bg-emerald-500/10">
-                <AlertTitle>Withdrawal ready for pickup</AlertTitle>
+                <AlertTitle>Withdrawal submitted</AlertTitle>
                 <AlertDescription className="space-y-1">
                   <p>
-                    Reference number:{' '}
-                    <strong>
-                      {ramp.transaction.external_transaction_id || ramp.transaction.id}
-                    </strong>
+                    {ramp.isMock
+                      ? 'Demo withdrawal complete (mock).'
+                      : 'IDR payout is processing via Xendit.'}
                   </p>
+                  {ramp.transaction.external_transaction_id && (
+                    <p>
+                      Reference: <strong>{ramp.transaction.external_transaction_id}</strong>
+                    </p>
+                  )}
                   {ramp.transaction.more_info_url && (
                     <p>
                       <a
@@ -113,7 +109,7 @@ export default function CashOutPage() {
                         rel="noopener noreferrer"
                         className="underline"
                       >
-                        View pickup details
+                        View payout status
                       </a>
                     </p>
                   )}
@@ -137,12 +133,11 @@ export default function CashOutPage() {
         </Card>
       </div>
 
-      <MoneyGramInteractive
+      <CoridorInteractive
         open={dialogOpen}
         url={ramp.interactiveUrl}
         step={ramp.step}
         onClose={ramp.dismissInteractive}
-        onRampMessage={ramp.handleRampMessage}
       />
     </div>
   );

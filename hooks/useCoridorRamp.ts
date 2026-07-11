@@ -4,22 +4,15 @@ import { useCallback, useRef, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useStellarWallet } from './useStellarWallet';
 import { useSignStellarTx } from './useSignStellarTx';
-import { getSep10Token } from '@/lib/moneygram/sep10';
+import { getSep10Token } from '@/lib/coridor/sep10';
 import {
   getSep24Info,
   getSep24Transaction,
   initiateSep24Interactive,
   submitWithdrawPayment,
-} from '@/lib/moneygram/sep24';
-import {
-  getAppDomain,
-  getMoneyGramDomain,
-  MONEYGRAM_CLIENT_COSIGN,
-  MONEYGRAM_MOCK,
-} from '@/lib/moneygram/config';
-import type { MoneyGramRampMessage } from '@/lib/moneygram/post-message';
-import { buildSep9FromPrivyUser } from '@/lib/moneygram/sep9';
-import type { Sep24Transaction } from '@/lib/moneygram/types';
+} from '@/lib/coridor/sep24';
+import { CORIDOR_MOCK, getCoridorDomain } from '@/lib/coridor/config';
+import type { Sep24Transaction } from '@/lib/coridor/types';
 import { WALLET_PREPARING_LABEL } from '@/lib/wallet-setup';
 
 export type RampKind = 'deposit' | 'withdraw';
@@ -42,8 +35,8 @@ function isWithdrawReady(tx: Sep24Transaction) {
   return tx.status === 'pending_user_transfer_complete' || tx.status === 'completed';
 }
 
-export function useMoneyGramRamp(kind: RampKind) {
-  const { ready, authenticated, login, user } = usePrivy();
+export function useCoridorRamp(kind: RampKind) {
+  const { ready, authenticated, login } = usePrivy();
   const { address, walletReady, preparing, setupError } = useStellarWallet();
   const { signTransactionXdr } = useSignStellarTx();
 
@@ -62,19 +55,6 @@ export function useMoneyGramRamp(kind: RampKind) {
       clearInterval(pollTimerRef.current);
       pollTimerRef.current = null;
     }
-  }, []);
-
-  const cosignTransactionXdr = useCallback(async (partialSignedXdr: string) => {
-    const res = await fetch('/api/moneygram/cosign', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transaction: partialSignedXdr }),
-    });
-    const json = (await res.json()) as { transaction?: string; error?: string };
-    if (!res.ok || !json.transaction) {
-      throw new Error(json.error || 'Client domain co-sign failed');
-    }
-    return json.transaction;
   }, []);
 
   const trySubmitWithdraw = useCallback(
@@ -114,9 +94,9 @@ export function useMoneyGramRamp(kind: RampKind) {
 
   const pollTransaction = useCallback(
     async (txId: string, token: string) => {
-      const domain = getMoneyGramDomain();
+      const domain = getCoridorDomain();
       const tx = await getSep24Transaction({
-        moneyGramDomain: domain,
+        coridorDomain: domain,
         authToken: token,
         transactionId: txId,
       });
@@ -151,27 +131,6 @@ export function useMoneyGramRamp(kind: RampKind) {
     [kind, stopPolling, trySubmitWithdraw],
   );
 
-  const handleRampMessage = useCallback(
-    (message: MoneyGramRampMessage) => {
-      const token = authTokenRef.current;
-      const txId = txIdRef.current;
-      if (!token || !txId) return;
-
-      if (message.transaction) {
-        setTransaction(message.transaction);
-        if (kind === 'withdraw' && message.transaction.status === 'pending_user_transfer_start') {
-          void trySubmitWithdraw(message.transaction, txId, token);
-        }
-      }
-
-      if (message.shouldClose) {
-        setInteractiveUrl(null);
-        if (step === 'interactive') setStep('polling');
-      }
-    },
-    [kind, step, trySubmitWithdraw],
-  );
-
   const startRamp = useCallback(
     async (amount?: string) => {
       setError(null);
@@ -198,7 +157,7 @@ export function useMoneyGramRamp(kind: RampKind) {
         return;
       }
 
-      if (MONEYGRAM_MOCK) {
+      if (CORIDOR_MOCK) {
         setStep('interactive');
         setInteractiveUrl(null);
         await sleep(1500);
@@ -215,26 +174,24 @@ export function useMoneyGramRamp(kind: RampKind) {
 
       try {
         setStep('authenticating');
-        const domain = getMoneyGramDomain();
+        const domain = getCoridorDomain();
         await getSep24Info(domain);
 
         const token = await getSep10Token({
-          moneyGramDomain: domain,
+          coridorDomain: domain,
           userPublicKey: address,
-          appDomain: getAppDomain(),
           signTransactionXdr,
-          cosignTransactionXdr: MONEYGRAM_CLIENT_COSIGN ? cosignTransactionXdr : undefined,
         });
         authTokenRef.current = token;
 
         setStep('starting');
         const interactive = await initiateSep24Interactive({
-          moneyGramDomain: domain,
+          coridorDomain: domain,
           authToken: token,
           kind: kind === 'deposit' ? 'deposit' : 'withdraw',
           account: address,
-          amount,
-          sep9: buildSep9FromPrivyUser(user),
+          // Amount is collected in the Coridor widget — omit here to avoid
+          // Anchor min_amount validation against a hint value.
         });
 
         txIdRef.current = interactive.id;
@@ -247,25 +204,13 @@ export function useMoneyGramRamp(kind: RampKind) {
         void pollTransaction(interactive.id, token);
       } catch (err) {
         setStep('error');
-        const message = err instanceof Error ? err.message : 'MoneyGram ramp failed';
-        if (message.includes('Client domain co-sign failed') || message.includes('503')) {
-          setError(
-            `${message} — set MONEYGRAM_CLIENT_SIGNING_SECRET on the server (Vercel env).`,
-          );
-        } else if (message.toLowerCase().includes('client_domain')) {
-          setError(
-            `${message} — ensure NEXT_PUBLIC_MONEYGRAM_CLIENT_COSIGN=true and domain matches MoneyGram allowlist.`,
-          );
-        } else {
-          setError(message);
-        }
+        setError(err instanceof Error ? err.message : 'Coridor ramp failed');
         stopPolling();
       }
     },
     [
       address,
       authenticated,
-      cosignTransactionXdr,
       kind,
       login,
       pollTransaction,
@@ -274,7 +219,6 @@ export function useMoneyGramRamp(kind: RampKind) {
       setupError,
       signTransactionXdr,
       stopPolling,
-      user,
       walletReady,
     ],
   );
@@ -305,10 +249,8 @@ export function useMoneyGramRamp(kind: RampKind) {
     startRamp,
     reset,
     dismissInteractive,
-    handleRampMessage,
-    isMock: MONEYGRAM_MOCK,
-    appDomain: getAppDomain(),
-    moneyGramDomain: getMoneyGramDomain(),
+    isMock: CORIDOR_MOCK,
+    coridorDomain: getCoridorDomain(),
     walletPreparing: preparing,
     walletReady,
   };

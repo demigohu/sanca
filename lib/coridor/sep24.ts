@@ -6,21 +6,20 @@ import {
   BASE_FEE,
 } from '@stellar/stellar-sdk';
 import { getSorobanRpc, NETWORK_PASSPHRASE, submitViaRelayer } from '@/lib/stellar';
-import { fetchMoneyGramToml } from './anchor';
-import { MONEYGRAM_USDC_ISSUER } from './config';
+import { fetchCoridorToml } from './anchor';
+import { CORIDOR_USDC_ISSUER } from './config';
 import type { Sep24Info, Sep24InteractiveResponse, Sep24Transaction } from './types';
-import type { Sep9Fields } from './sep9';
 
-async function getTransferServer(moneyGramDomain: string): Promise<string> {
-  const toml = await fetchMoneyGramToml(moneyGramDomain);
+async function getTransferServer(coridorDomain: string): Promise<string> {
+  const toml = await fetchCoridorToml(coridorDomain);
   if (!toml.TRANSFER_SERVER_SEP0024) {
-    throw new Error('MoneyGram anchor missing TRANSFER_SERVER_SEP0024');
+    throw new Error('Coridor anchor missing TRANSFER_SERVER_SEP0024');
   }
   return toml.TRANSFER_SERVER_SEP0024.replace(/\/$/, '');
 }
 
-export async function getSep24Info(moneyGramDomain: string): Promise<Sep24Info> {
-  const server = await getTransferServer(moneyGramDomain);
+export async function getSep24Info(coridorDomain: string): Promise<Sep24Info> {
+  const server = await getTransferServer(coridorDomain);
   const res = await fetch(`${server}/info`);
   const json = (await res.json()) as Sep24Info & { error?: string };
   if (!res.ok) throw new Error(json.error || 'Failed to fetch SEP-24 info');
@@ -28,27 +27,21 @@ export async function getSep24Info(moneyGramDomain: string): Promise<Sep24Info> 
 }
 
 export async function initiateSep24Interactive(params: {
-  moneyGramDomain: string;
+  coridorDomain: string;
   authToken: string;
   kind: 'deposit' | 'withdraw';
   account: string;
   assetCode?: string;
   amount?: string;
   lang?: string;
-  sep9?: Sep9Fields;
 }): Promise<Sep24InteractiveResponse> {
-  const server = await getTransferServer(params.moneyGramDomain);
+  const server = await getTransferServer(params.coridorDomain);
   const body: Record<string, string> = {
     account: params.account,
     asset_code: params.assetCode || 'USDC',
     lang: params.lang || 'en',
   };
   if (params.amount) body.amount = params.amount;
-  if (params.sep9) {
-    for (const [key, value] of Object.entries(params.sep9)) {
-      if (value) body[key] = value;
-    }
-  }
 
   const res = await fetch(`${server}/transactions/${params.kind}/interactive`, {
     method: 'POST',
@@ -64,17 +57,15 @@ export async function initiateSep24Interactive(params: {
     throw new Error(json.error || `Failed to start SEP-24 ${params.kind}`);
   }
 
-  const url = new URL(json.url);
-  url.searchParams.set('callback', 'postMessage');
-  return { ...json, url: url.toString() };
+  return json;
 }
 
 export async function getSep24Transaction(params: {
-  moneyGramDomain: string;
+  coridorDomain: string;
   authToken: string;
   transactionId: string;
 }): Promise<Sep24Transaction> {
-  const server = await getTransferServer(params.moneyGramDomain);
+  const server = await getTransferServer(params.coridorDomain);
   const res = await fetch(`${server}/transaction?id=${encodeURIComponent(params.transactionId)}`, {
     headers: { Authorization: `Bearer ${params.authToken}` },
   });
@@ -101,7 +92,7 @@ export async function submitWithdrawPayment(params: {
 
   const server = getSorobanRpc();
   const account = await server.getAccount(params.userPublicKey);
-  const asset = new Asset('USDC', MONEYGRAM_USDC_ISSUER);
+  const asset = new Asset('USDC', CORIDOR_USDC_ISSUER);
 
   let builder = new TransactionBuilder(account, {
     fee: BASE_FEE,
@@ -118,6 +109,13 @@ export async function submitWithdrawPayment(params: {
     builder = builder.addMemo(Memo.id(transaction.withdraw_memo));
   } else if (transaction.withdraw_memo && transaction.withdraw_memo_type === 'text') {
     builder = builder.addMemo(Memo.text(transaction.withdraw_memo));
+  } else if (transaction.withdraw_memo) {
+    const memo = transaction.withdraw_memo.trim();
+    if (/^\d+$/.test(memo)) {
+      builder = builder.addMemo(Memo.id(memo));
+    } else {
+      builder = builder.addMemo(Memo.text(memo.slice(0, 28)));
+    }
   }
 
   const tx = builder.setTimeout(180).build();

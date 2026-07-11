@@ -32,17 +32,13 @@ function isAllowedUsdcChangeTrust(op: Operation): op is Operation.ChangeTrust {
   return line.getCode() === config.usdcAssetCode && ALLOWED_TRUST_ISSUERS.has(line.getIssuer());
 }
 
-/** Off-ramp: user sends Circle USDC to MoneyGram (relayer pays the fee). */
+/** Off-ramp: user sends Blend USDC to Coridor (relayer pays the fee). */
 function isAllowedUsdcPayment(op: Operation): boolean {
   if (op.type !== 'payment') return false;
   const asset = op.asset;
   if (!(asset instanceof Asset)) return false;
-  if (
-    asset.getCode() !== config.usdcAssetCode ||
-    asset.getIssuer() !== config.moneygramUsdcIssuer
-  ) {
-    return false;
-  }
+  if (asset.getCode() !== config.usdcAssetCode) return false;
+  if (!ALLOWED_TRUST_ISSUERS.has(asset.getIssuer())) return false;
   const amount = Number.parseFloat(op.amount);
   if (!Number.isFinite(amount) || amount <= 0 || amount > config.maxUsdcPayment) {
     return false;
@@ -79,7 +75,7 @@ async function parseAndValidate(
     for (const op of tx.operations) {
       if (op.type !== 'changeTrust') continue;
       if (!isAllowedUsdcChangeTrust(op)) {
-        throw new Error('Only Blend or MoneyGram USDC changeTrust is allowed');
+        throw new Error('Only Blend USDC changeTrust is allowed');
       }
       const line = op.line;
       if (!(line instanceof Asset)) {
@@ -102,7 +98,7 @@ async function parseAndValidate(
 
   if (op.type === 'changeTrust') {
     if (!isAllowedUsdcChangeTrust(op)) {
-      throw new Error('Only Blend or MoneyGram USDC changeTrust is allowed');
+      throw new Error('Only Blend USDC changeTrust is allowed');
     }
     return tx;
   }
@@ -212,10 +208,10 @@ export async function relay(signedInnerXdr: string): Promise<string> {
   const sorobanRpc = getRpc();
   const innerTx = await parseAndValidate(signedInnerXdr, sorobanRpc);
 
-  const changeTrustOnly = innerTx.operations.every((op) => op.type === 'changeTrust');
-  // Soroban RPC simulateTransaction rejects classic multi-op txs ("more than one operation").
-  // changeTrust is validated above; skip sim and submit via fee-bump directly.
-  if (!changeTrustOnly) {
+  const classicOnly = isClassicInnerTx(innerTx);
+  // Soroban simulateTransaction only supports contract invocations — not classic ops
+  // (changeTrust multi-op, payment + SEP-24 memo, etc.). Validate above; fee-bump via Horizon poll.
+  if (!classicOnly) {
     const sim = await sorobanRpc.simulateTransaction(innerTx);
     if (!rpc.Api.isSimulationSuccess(sim)) {
       throw new Error(`Simulation failed: ${JSON.stringify(sim)}`);

@@ -2,7 +2,7 @@
 
 Community savings circles (ROSCA / arisan) on Stellar — web2 UX, on-chain enforcement, DeFindex yield, and drand-verifiable winner selection.
 
-**Pitch:** Privy embedded wallets + fee-bump relayer (no XLM for users) + DeFindex vault yield + MoneyGram fiat ramps + drand randomness on Soroban.
+**Pitch:** Privy embedded wallets + fee-bump relayer (no XLM for users) + DeFindex vault yield + Coridor IDR ramps + drand randomness on Soroban.
 
 ## What it does
 
@@ -28,7 +28,7 @@ Community savings circles (ROSCA / arisan) on Stellar — web2 UX, on-chain enfo
 - **Contracts:** Rust, soroban-sdk, drand BLS verification (CAP-0059)
 - **Yield:** DeFindex USDC vault (testnet SAC)
 - **Services:** Node.js keeper + relayer
-- **Fiat (mock/live):** MoneyGram SEP-10 / SEP-24
+- **Fiat (IDR ramp):** Coridor SEP-10 / SEP-24 (VA, QRIS, OVO)
 
 ## Testnet (current)
 
@@ -37,7 +37,7 @@ Community savings circles (ROSCA / arisan) on Stellar — web2 UX, on-chain enfo
 | Factory | `CBOYFEB3KN4WOZVSIC5QPEM6KJTQRDH4IW6WUT6QK4QZPPWHPUABBGR7` |
 | USDC SAC | `CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU` |
 | DeFindex vault | `CBMVK2JK6NTOT2O4HNQAIQFJY232BHKGLIMXDVQVHIIZKDACXDFZDWHN` |
-| USDC decimals | **7** (testnet + mainnet MoneyGram SAC) |
+| USDC decimals | **7** (Blend USDC on Stellar via Coridor) |
 
 See `contracts/DEPLOYMENT.md` and `contracts/scripts/deploy.sh` to redeploy.
 

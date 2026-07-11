@@ -1,34 +1,24 @@
 import { WebAuth } from '@stellar/stellar-sdk';
 import { NETWORK_PASSPHRASE } from '@/lib/stellar';
-import { fetchMoneyGramToml } from './anchor';
+import { fetchCoridorToml } from './anchor';
+import { getCoridorDomain } from './config';
 
 export async function getSep10Token(params: {
-  moneyGramDomain: string;
+  coridorDomain?: string;
   userPublicKey: string;
-  appDomain: string;
   signTransactionXdr: (unsignedXdr: string, publicKey: string) => Promise<string>;
-  cosignTransactionXdr?: (partialSignedXdr: string) => Promise<string>;
 }): Promise<string> {
-  const toml = await fetchMoneyGramToml(params.moneyGramDomain);
+  const domain = params.coridorDomain || getCoridorDomain();
+  const toml = await fetchCoridorToml(domain);
   if (!toml.WEB_AUTH_ENDPOINT || !toml.SIGNING_KEY) {
-    throw new Error('MoneyGram anchor missing WEB_AUTH_ENDPOINT or SIGNING_KEY in stellar.toml');
+    throw new Error('Coridor anchor missing WEB_AUTH_ENDPOINT or SIGNING_KEY in stellar.toml');
   }
 
   const authEndpoint = toml.WEB_AUTH_ENDPOINT;
   const networkPassphrase = toml.NETWORK_PASSPHRASE || NETWORK_PASSPHRASE;
   const webAuthDomain = new URL(authEndpoint).hostname;
-  const useClientDomain = Boolean(params.cosignTransactionXdr);
 
-  const qs = new URLSearchParams({
-    account: params.userPublicKey,
-  });
-  // Non-custodial Privy: MoneyGram allowlists client_domain (not home_domain).
-  if (useClientDomain) {
-    qs.set('client_domain', params.appDomain);
-  } else {
-    qs.set('home_domain', params.appDomain);
-  }
-
+  const qs = new URLSearchParams({ account: params.userPublicKey });
   const challengeRes = await fetch(`${authEndpoint}?${qs.toString()}`);
   const challengeJson = (await challengeRes.json()) as {
     transaction?: string;
@@ -37,28 +27,21 @@ export async function getSep10Token(params: {
   };
 
   if (!challengeRes.ok || !challengeJson.transaction) {
-    throw new Error(challengeJson.error || 'Failed to fetch SEP-10 challenge from MoneyGram');
+    throw new Error(challengeJson.error || 'Failed to fetch SEP-10 challenge from Coridor');
   }
-
-  // With client_domain, MoneyGram sets the challenge home op to the anchor domain.
-  const challengeHomeDomain = useClientDomain ? params.moneyGramDomain : params.appDomain;
 
   WebAuth.readChallengeTx(
     challengeJson.transaction,
     toml.SIGNING_KEY,
     challengeJson.network_passphrase || networkPassphrase,
-    challengeHomeDomain,
+    domain,
     webAuthDomain,
   );
 
-  let signedXdr = await params.signTransactionXdr(
+  const signedXdr = await params.signTransactionXdr(
     challengeJson.transaction,
     params.userPublicKey,
   );
-
-  if (params.cosignTransactionXdr) {
-    signedXdr = await params.cosignTransactionXdr(signedXdr);
-  }
 
   const tokenRes = await fetch(authEndpoint, {
     method: 'POST',

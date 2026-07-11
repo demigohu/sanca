@@ -14,12 +14,11 @@ import {
   submitViaRelayer,
   USDC_ASSET_CODE,
 } from './stellar';
-import { MONEYGRAM_USDC_ISSUER } from './moneygram/config';
 
 const MAX_TRUST_LIMIT = '922337203685.4775807';
 
-/** Classic issuers required for Sanca pools (Blend) + MoneyGram ramps (Circle). */
-export const TRUSTLINE_ISSUERS = [POOL_USDC_ISSUER, MONEYGRAM_USDC_ISSUER] as const;
+/** Blend USDC — pools, DeFindex, and Coridor ramp share one issuer. */
+export const TRUSTLINE_ISSUERS = [POOL_USDC_ISSUER] as const;
 
 type HorizonBalance = {
   asset_type?: string;
@@ -98,12 +97,11 @@ export async function signStellarTransaction(params: {
   });
   const sigBytes = Buffer.from(signatureHex.replace(/^0x/, ''), 'hex');
   const hint = Buffer.from(Keypair.fromPublicKey(userAddress).rawPublicKey()).slice(-4);
-  // Must push — assigning to tx.signatures throws "Transaction is immutable" in SDK v13+.
   tx.signatures.push(new xdr.DecoratedSignature({ hint, signature: sigBytes }));
   return tx.toXDR();
 }
 
-/** Add Blend + MoneyGram USDC trustlines in one signed tx when needed. */
+/** Add Blend USDC trustline when needed. */
 export async function ensureUsdcTrustlines(params: {
   address: string;
   signRawHash: (args: {
@@ -128,7 +126,6 @@ export async function ensureUsdcTrustlines(params: {
     const hash = await submitViaRelayer(signedXdr);
     return { created: true, hash, issuers: missing };
   } catch (err) {
-    // Relayer may fail polling even when the tx landed — verify on Horizon.
     const stillMissing = await getMissingTrustlineIssuers(params.address);
     if (stillMissing.length === 0) {
       return { created: true, hash: null, issuers: missing };
