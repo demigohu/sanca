@@ -4,6 +4,7 @@ export interface KeeperConfig {
   adminSecret?: string; // only needed for set-factory-keeper; not required for main loop
   network: 'testnet' | 'public';
   rpcUrl: string;
+  horizonUrl: string;
   drandChainHash: string;
   pollIntervalMs: number;
 }

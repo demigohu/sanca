@@ -3,7 +3,7 @@
 > **Versi:** 1.1  
 > **Tanggal:** 8 Juli 2026  
 > **Status:** Active — APAC Stellar Hackathon 2026  
-> **Track:** Local Finance & Real World Access ($20,000)  
+> **Track:** DeFi & Ecosystem Composability ($20,000)  
 > **Deadline submission:** 15 Juli 2026  
 > **Demo Day:** 18 Juli 2026  
 > **Grand Finale:** 24 Juli 2026  
@@ -46,11 +46,11 @@
 
 **Sanca** adalah aplikasi tabungan komunitas (arisan / ROSCA) yang terasa seperti aplikasi web2, tetapi berjalan di atas Stellar smart contracts. User login dengan email/social, top up dan cash out dengan fiat via Coridor, ikut savings circle, dan otomatis mendapat yield dari DeFindex vault. Pemenang setiap periode dipilih secara adil dengan drand verifiable randomness.
 
-**Tagline:** *"Tabungan komunitas Indonesia, sekarang berhadiah DeFi."*
+**Tagline:** *"Community savings that composes Stellar DeFi — DeFindex yield, drand fairness, ecosystem integrations."*
 
 **One-sentence pitch (submission):**
 
-> Sanca brings Indonesia's community savings circles (arisan) on-chain with a web2 mobile UX — using Privy embedded wallets, fee-bump relayers, DeFindex yield vaults, Coridor fiat ramps, and drand verifiable randomness on Stellar.
+> Sanca is a composable consumer ROSCA on Stellar — wiring Privy wallets, fee-bump relayers, DeFindex yield vaults, Coridor ramps, and drand verifiable randomness into one savings-circle protocol without rebuilding DeFi from scratch.
 
 ### Status Proyek (8 Juli 2026)
 
@@ -192,12 +192,12 @@ Membuktikan bahwa arisan on-chain di Stellar bisa:
 
 | Aspek | Pesan ke juri |
 |-------|---------------|
-| Track | Local Finance & Real World Access |
-| User | Komunitas arisan Indonesia — ibu-ibu RT, koperasi, komunitas online |
-| Problem | Trust + enforcement + yield + transparency |
-| Solution | Smart contract ROSCA + fiat ramp + embedded wallet |
-| Composability | DeFindex vault, Coridor ramp, Privy wallet, drand |
-| Demo | Full flow: login → top up → join → contribute → menang → cash out |
+| Track | DeFi & Ecosystem Composability |
+| User | Komunitas arisan APAC — plus developer/juri yang menilai composability ke DeFindex, SAC, drand |
+| Problem | ROSCA butuh yield + enforcement; DeFi butuh consumer utility di luar crypto natives |
+| Solution | Composable ROSCA: pool contract + DeFindex vault + drand + wallet + ramp |
+| Composability | DeFindex vault, Coridor ramp, Privy wallet, drand, Soroban factory/pool |
+| Demo | Full flow: login → top up → join → contribute → settle (yield bonus) → withdraw |
 
 ---
 
@@ -225,9 +225,9 @@ Membuktikan bahwa arisan on-chain di Stellar bisa:
 
 | Kriteria | Bobot | How Sanca Delivers | Target Score |
 |----------|-------|-------------------|--------------|
-| Technical + Stellar usage | 25% | Soroban, SAC, DeFindex, fee-bump, drand, Privy | High |
-| Real-world fit | 25% | Arisan Indonesia, Coridor IDR, komunitas nyata | High |
-| Innovation | 20% | drand + yield ROSCA + relayer + embedded wallet | High |
+| Technical + Stellar usage | 25% | Soroban factory/pool, DeFindex cross-contract, on-chain BLS drand, fee-bump relayer | High |
+| Real-world fit | 25% | ROSCA/arisan APAC; stablecoin savings with real DeFindex yield | High |
+| Innovation | 20% | Yield-bearing composable ROSCA + drand + relayer + embedded wallet; not a clone vault | High |
 | UX & accessibility | 5% | Email login, IDR, no crypto jargon | Medium-High |
 | Viability & GTM | 10% | Pilot komunitas, revenue dari yield fee | Medium |
 | Team & continue | 5% | Codebase substantial, roadmap jelas | Medium |

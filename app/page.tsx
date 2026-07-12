@@ -131,7 +131,7 @@ export default function LandingPage() {
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-card">
                   <div className="w-2 h-2 bg-accent rounded-full"></div>
                   <span className="text-xs font-medium text-muted-foreground">
-                    AI-Managed DeFi ROSCA on Stellar
+                    Composable DeFi ROSCA on Stellar
                   </span>
                 </div>
                 <h1 className="text-5xl sm:text-6xl font-bold text-foreground leading-tight">
@@ -140,9 +140,8 @@ export default function LandingPage() {
                   <span className="text-accent">Earn Together</span>
                 </h1>
                 <p className="text-lg text-muted-foreground max-w-md">
-                  Join transparent community savings pools on Stellar. Sanca turns pooled
-                  collateral into productive on-chain capital with automated payouts and an
-                  intelligent keeper.
+                  Community savings circles built on Stellar DeFi building blocks — DeFindex
+                  yield on collateral, drand-verified draws, Privy login, and Coridor IDR ramps.
                 </p>
               </div>
 
@@ -218,8 +217,8 @@ export default function LandingPage() {
               How Sanca Works
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Create a savings circle, lock collateral, contribute per cycle, and let
-              Stellar-native automation coordinate payouts and vault management.
+              A composable ROSCA protocol: create a circle, lock collateral in DeFindex, contribute
+              each cycle, and let on-chain automation settle fair payouts.
             </p>
           </div>
 
@@ -290,8 +289,8 @@ export default function LandingPage() {
               Why Choose Sanca
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Built for transparent savings coordination, fair randomness, productive capital,
-              and visible keeper intelligence.
+              Built by composing Stellar primitives — transparent savings, fair randomness,
+              productive USDC collateral, and automated settlement.
             </p>
           </div>
 
@@ -323,9 +322,9 @@ export default function LandingPage() {
               },
               {
                 icon: ChartColumnBig,
-                title: "Intelligent Keeper Layer",
+                title: "Automated Settlement",
                 description:
-                  "A volatility-aware keeper monitors vault context, surfaces 30D APY and TVL, and decides when to rebalance or collect fees.",
+                  "An off-chain keeper watches active pools and calls settle_cycle with a fresh drand beacon when each period ends — payouts and yield bonuses run on-chain.",
               },
               {
                 icon: Handshake,
@@ -417,7 +416,7 @@ export default function LandingPage() {
               {
                 question: "How do I create a circle?",
                 answer:
-                  "Connect your wallet, click 'Create Circle', and set the key parameters: max members, contribution per period, period duration, and yield bonus split. The SancaFactory contract deploys a new SancaPool, and members then join by depositing their full collateral.",
+                  "Connect your wallet, click 'Create Circle', and set max members, contribution per period, and period duration. SancaFactory deploys a new SancaPool; members join by depositing full collateral.",
               },
               {
                 question: "Can I join multiple pools?",
@@ -437,7 +436,7 @@ export default function LandingPage() {
               {
                 question: "What does the keeper do?",
                 answer:
-                  "The keeper is Sanca's intelligent DeFi operations layer. It monitors vault state, volatility regime, and fee conditions, then decides whether to rebalance, collect fees, or do nothing. The frontend surfaces those decisions, APY, TVL, and transaction history.",
+                  "The keeper is an off-chain service that polls all factory pools. When a cycle period ends, it fetches the latest drand beacon and submits settle_cycle so winners receive the pot plus a DeFindex yield bonus.",
               },
               {
                 question: "Is my money secure?",
@@ -447,7 +446,7 @@ export default function LandingPage() {
               {
                 question: "What fees does Sanca charge?",
                 answer:
-                  "At the contract level, Sanca does not charge protocol fees on deposits or payouts in this MVP. Network fees are minimal and often sponsored by the relayer on testnet. Frontends or integrations may add their own fees separately.",
+                  "Sanca takes a 10% platform fee on the yield bonus paid to cycle winners (on-chain via platform_fee_bps). Cycle pot principal is untouched. Network fees on testnet are often covered by the relayer.",
               },
               {
                 question: "Can I leave a circle?",

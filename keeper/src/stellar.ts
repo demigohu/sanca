@@ -56,6 +56,48 @@ export async function simulateContractCall(
   return sim.result.retval;
 }
 
+type HorizonTx = { successful?: boolean };
+
+/** Soroban RPC getTransaction can throw "Bad union switch" on some ledger XDR shapes. */
+async function pollHorizonTransaction(hash: string): Promise<void> {
+  for (let i = 0; i < 30; i++) {
+    await sleep(1000);
+    const res = await fetch(`${config.horizonUrl}/transactions/${hash}`);
+    if (res.status === 404) continue;
+    if (!res.ok) continue;
+    const data = (await res.json()) as HorizonTx;
+    if (data.successful === true) return;
+    if (data.successful === false) {
+      throw new Error(`Transaction failed on ledger: ${hash}`);
+    }
+  }
+  throw new Error(`Timeout waiting for tx ${hash}`);
+}
+
+async function pollSubmittedTransaction(
+  hash: string,
+  sorobanRpc: rpc.Server,
+): Promise<void> {
+  for (let i = 0; i < 30; i++) {
+    await sleep(1000);
+    try {
+      const status = await sorobanRpc.getTransaction(hash);
+      if (status.status === 'SUCCESS') return;
+      if (status.status === 'FAILED') {
+        throw new Error(`Transaction failed: ${JSON.stringify(status)}`);
+      }
+    } catch (err) {
+      try {
+        await pollHorizonTransaction(hash);
+        return;
+      } catch {
+        if (i === 29) throw err;
+      }
+    }
+  }
+  throw new Error(`Timeout waiting for tx ${hash}`);
+}
+
 export async function invokeContract(
   sorobanRpc: rpc.Server,
   contractAddress: string,
@@ -92,22 +134,8 @@ export async function invokeContract(
   }
 
   const hash = sendResult.hash;
-  for (let i = 0; i < 30; i++) {
-    await sleep(1000);
-    const status = await sorobanRpc.getTransaction(hash);
-    if (status.status === 'SUCCESS') {
-      return hash;
-    }
-    if (status.status === 'FAILED') {
-      throw new Error(
-        `Transaction failed for ${contractAddress}.${method}: ${JSON.stringify(status)}`,
-      );
-    }
-  }
-
-  throw new Error(
-    `Timeout waiting for ${contractAddress}.${method} transaction ${hash}`,
-  );
+  await pollSubmittedTransaction(hash, sorobanRpc);
+  return hash;
 }
 
 export async function getAllPoolAddresses(sorobanRpc: rpc.Server): Promise<string[]> {

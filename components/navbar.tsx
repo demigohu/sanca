@@ -54,7 +54,7 @@ export default function Navbar() {
                             <button
                                 type="button"
                                 className="relative cursor-pointer inline-flex items-center justify-center lg:hidden"
-                                aria-label={mobileOpen ? "Tutup menu" : "Buka menu"}
+                                aria-label={mobileOpen ? "Close menu" : "Open menu"}
                                 aria-controls={mobileMenuId}
                                 aria-expanded={mobileOpen}
                                 onClick={() => setMobileOpen((v) => !v)}

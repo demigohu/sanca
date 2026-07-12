@@ -53,13 +53,12 @@ export default function TopUpPage() {
               Deposit
             </CardTitle>
             <CardDescription>
-              Anchor: {ramp.coridorDomain} · Min Rp 10.000 di widget · Sandbox: Simulate
+              Anchor: {ramp.coridorDomain} · Min IDR 10,000 in widget · Sandbox: use Simulate
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Nominal IDR kamu isi di widget Coridor (VA, QRIS, atau OVO). Tidak perlu input di
-              sini.
+              Enter your IDR amount in the Coridor widget (VA, QRIS, or OVO).
             </p>
 
             <div className="flex gap-3">

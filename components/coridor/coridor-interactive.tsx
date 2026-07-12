@@ -24,7 +24,7 @@ export function CoridorInteractive({ open, url, step, onClose }: CoridorInteract
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
           <DialogTitle>Coridor</DialogTitle>
           <DialogDescription>
-            Bayar IDR (VA, QRIS, OVO) atau isi rekening bank. Sandbox: gunakan tombol Simulate.
+            Pay in IDR (VA, QRIS, OVO) or enter bank details. Sandbox: use the Simulate button.
           </DialogDescription>
         </DialogHeader>
 

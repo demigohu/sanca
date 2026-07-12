@@ -28,7 +28,7 @@ export default function CircleDetailPage() {
     if (!data?.pool || data.pool.totalCycles === 0) return 0;
     // Count completed cycles dari data.cycles
     const completedCycles = data.cycles?.filter((cycle: any) => cycle.winner !== null).length || 0;
-    // Jika ada completed cycles, gunakan itu, jika tidak gunakan currentCycle sebagai fallback
+    // Prefer completed cycles count; fall back to currentCycle when none completed yet
     const cyclesCompleted = completedCycles > 0 ? completedCycles : data.pool.currentCycle;
     return Math.round((cyclesCompleted / data.pool.totalCycles) * 100);
   };

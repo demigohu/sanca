@@ -22,6 +22,9 @@ export const config: KeeperConfig = {
   adminSecret: process.env.ADMIN_SECRET,
   network,
   rpcUrl: process.env.RPC_URL || 'https://soroban-testnet.stellar.org',
+  horizonUrl:
+    process.env.HORIZON_URL ||
+    (network === 'public' ? 'https://horizon.stellar.org' : 'https://horizon-testnet.stellar.org'),
   drandChainHash:
     process.env.DRAND_CHAIN_HASH ||
     '52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971',

@@ -46,12 +46,13 @@ export default function CashOutPage() {
               Withdraw
             </CardTitle>
             <CardDescription>
-              USDC amount & bank details di widget Coridor · min ~0.5 USDC
+              USDC amount and bank details in the Coridor widget · min ~0.5 USDC
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Setelah widget selesai, Sanca otomatis kirim USDC + memo ke anchor (fee relayer).
+              After you finish in the widget, Sanca automatically sends USDC + memo to the anchor
+              (relayer covers the network fee).
             </p>
 
             <div className="flex gap-3">
