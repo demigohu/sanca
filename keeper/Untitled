@@ -1,0 +1,2 @@
+# Horizon fallback when Soroban RPC getTransaction fails (keeper polling)
+HORIZON_URL=https://horizon-testnet.stellar.org

@@ -60,17 +60,17 @@ npm start
 
 ## Deploy on Ubuntu VPS
 
-Set in `.env`:
+**Full guide (PM2 + nginx + env):** [`docs/VPS_DEPLOY.md`](../docs/VPS_DEPLOY.md)
 
-```env
-FACTORY_ADDRESS=C...
-KEEPER_SECRET=S...
-NETWORK=testnet
-RPC_URL=https://soroban-testnet.stellar.org
-POLL_INTERVAL_MS=15000
+Quick start from repo root:
+
+```bash
+cd keeper && npm ci && npm run build
+cd ../relayer && npm ci && npm run build
+cd .. && pm2 start ecosystem.config.cjs && pm2 save
 ```
 
-See `sanca-keeper.service` for systemd setup.
+See `sanca-keeper.service` for systemd alternative.
 
 ---
 

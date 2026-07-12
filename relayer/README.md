@@ -118,30 +118,17 @@ const { hash } = await res.json();
 
 ## Deploy on Ubuntu VPS
 
-Same pattern as the keeper. Uses the same `sanca` system user.
+**Full guide (PM2 + nginx + env):** [`docs/VPS_DEPLOY.md`](../docs/VPS_DEPLOY.md)
+
+Quick start from repo root:
 
 ```bash
-# 1. Copy files
-rsync -av --exclude node_modules --exclude dist --exclude .env \
-  ./relayer/ user@your-vps:/opt/sanca/relayer/
-
-# 2. Install & build
-ssh user@your-vps "cd /opt/sanca/relayer && npm ci --omit=dev && npm run build"
-
-# 3. Create .env
-sudo nano /opt/sanca/relayer/.env
-sudo chown sanca:sanca /opt/sanca/relayer/.env
-sudo chmod 600 /opt/sanca/relayer/.env
-
-# 4. Systemd
-sudo cp /opt/sanca/relayer/sanca-relayer.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable sanca-relayer
-sudo systemctl start sanca-relayer
-
-# 5. Logs
-sudo journalctl -u sanca-relayer -f
+cd keeper && npm ci && npm run build
+cd ../relayer && npm ci && npm run build
+cd .. && pm2 start ecosystem.config.cjs && pm2 save
 ```
+
+See `sanca-relayer.service` for systemd alternative.
 
 **Fund the relayer account:** Deposit ≥ 10 XLM (testnet). Each fee-bump costs ≤ 0.01 XLM at `MAX_FEE=100000`.
 
