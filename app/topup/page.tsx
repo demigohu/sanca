@@ -8,6 +8,7 @@ import { ArrowDownToLine, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { TxExplorerLink } from '@/components/stellar/tx-explorer-link';
 
 export default function TopUpPage() {
   const ramp = useCoridorRamp('deposit');
@@ -84,13 +85,17 @@ export default function TopUpPage() {
             {ramp.step === 'completed' && ramp.transaction && (
               <Alert className="border-emerald-500/30 bg-emerald-500/10">
                 <AlertTitle>Deposit complete</AlertTitle>
-                <AlertDescription>
-                  {ramp.isMock
-                    ? 'Demo deposit credited (mock).'
-                    : `${ramp.transaction.amount_out || ramp.transaction.amount_in || ''} USDC received`}
-                  {ramp.transaction.stellar_transaction_id
-                    ? ` · tx ${ramp.transaction.stellar_transaction_id.slice(0, 8)}…`
-                    : ''}
+                <AlertDescription className="space-y-1">
+                  <p>
+                    {ramp.isMock
+                      ? 'Demo deposit credited (mock).'
+                      : `${ramp.transaction.amount_out || ramp.transaction.amount_in || ''} USDC received`}
+                  </p>
+                  {ramp.transaction.stellar_transaction_id && !ramp.isMock && (
+                    <p>
+                      <TxExplorerLink txHash={ramp.transaction.stellar_transaction_id} />
+                    </p>
+                  )}
                 </AlertDescription>
               </Alert>
             )}

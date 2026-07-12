@@ -94,7 +94,7 @@ stellar contract invoke \
   --max_members 2 \
   --contribution_per_period 50000000 \
   --period_duration 300 \
-  --name "Demo 2x5min" \
+  --name "Demo Video" \
   --description "2 members, 5 USDC per cycle, 5-minute periods"
 ```
 

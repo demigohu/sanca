@@ -8,9 +8,13 @@ import { ArrowUpFromLine, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { TxExplorerLink } from '@/components/stellar/tx-explorer-link';
 
 export default function CashOutPage() {
   const ramp = useCoridorRamp('withdraw');
+
+  const stellarTxHash =
+    ramp.paymentTxHash ?? ramp.transaction?.stellar_transaction_id ?? null;
 
   const dialogOpen =
     ramp.step === 'interactive' ||
@@ -112,6 +116,11 @@ export default function CashOutPage() {
                       >
                         View payout status
                       </a>
+                    </p>
+                  )}
+                  {stellarTxHash && !ramp.isMock && (
+                    <p>
+                      <TxExplorerLink txHash={stellarTxHash} />
                     </p>
                   )}
                 </AlertDescription>

@@ -44,6 +44,7 @@ export function useCoridorRamp(kind: RampKind) {
   const [error, setError] = useState<string | null>(null);
   const [interactiveUrl, setInteractiveUrl] = useState<string | null>(null);
   const [transaction, setTransaction] = useState<Sep24Transaction | null>(null);
+  const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null);
 
   const authTokenRef = useRef<string | null>(null);
   const txIdRef = useRef<string | null>(null);
@@ -73,11 +74,12 @@ export function useCoridorRamp(kind: RampKind) {
       setInteractiveUrl(null);
 
       try {
-        await submitWithdrawPayment({
+        const hash = await submitWithdrawPayment({
           userPublicKey: address,
           transaction: tx,
           signTransactionXdr,
         });
+        setPaymentTxHash(hash);
         setStep('polling');
         pollTimerRef.current = setInterval(() => {
           void pollTransaction(txId, token);
@@ -135,6 +137,7 @@ export function useCoridorRamp(kind: RampKind) {
     async (amount?: string) => {
       setError(null);
       setTransaction(null);
+      setPaymentTxHash(null);
       stopPolling();
       withdrawSubmittedRef.current = null;
       txIdRef.current = null;
@@ -236,6 +239,7 @@ export function useCoridorRamp(kind: RampKind) {
     setError(null);
     setInteractiveUrl(null);
     setTransaction(null);
+    setPaymentTxHash(null);
     authTokenRef.current = null;
     txIdRef.current = null;
     withdrawSubmittedRef.current = null;
@@ -246,6 +250,7 @@ export function useCoridorRamp(kind: RampKind) {
     error,
     interactiveUrl,
     transaction,
+    paymentTxHash,
     startRamp,
     reset,
     dismissInteractive,
