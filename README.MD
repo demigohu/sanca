@@ -305,8 +305,6 @@ Requires funded Stellar CLI identities (`sanca-deployer`, `sanca-member*`) with 
 | Member | Role | Social |
 |--------|------|--------|
 | Tegar Aji Kurniawan | Smart contracts, keeper, relayer, integrations | [LinkedIn](https://www.linkedin.com/in/tegaraji) |
-| Muhammad Garry Badruzzaman | Frontend, UX, Privy, product | [LinkedIn](https://www.linkedin.com/in/muhammad-garry) |
-
 ---
 
 ## Roadmap
