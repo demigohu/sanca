@@ -18,8 +18,8 @@
 |----------|------|
 | **Live App** | [https://www.sanca.space](https://www.sanca.space) |
 | **Factory (testnet)** | [`CBOYFEB3KN4WOZVSIC5QPEM6KJTQRDH4IW6WUT6QK4QZPPWHPUABBGR7`](https://stellar.expert/explorer/testnet/contract/CBOYFEB3KN4WOZVSIC5QPEM6KJTQRDH4IW6WUT6QK4QZPPWHPUABBGR7) |
-| **Video Demo** | *(add 2–3 min YouTube/Loom link before submission)* |
-| **Pitch Deck** | *(add Google Slides / PDF link before submission)* |
+| **Video Demo** | [Youtube](https://youtu.be/feCH4332wEE?si=f30Wf0ZUIIv7TZd7) |
+| **Pitch Deck** | [Canva](https://canva.link/5bt3h9k42pci320) |
 
 ---
 
@@ -315,9 +315,8 @@ Requires funded Stellar CLI identities (`sanca-deployer`, `sanca-member*`) with 
 - [x] drand on-chain BLS verification
 - [x] Privy embedded wallet + fee-bump relayer
 - [x] Coridor SEP-10/24 anchor (Blend USDC)
-- [ ] **Demo video** (2–3 min) — *submission blocker*
-- [ ] **Pitch deck** — *submission blocker*
-- [ ] Settlement-pending UX on circle detail
+- [x] **Demo video**
+- [x] **Pitch deck**
 
 ### Post-hackathon
 - Mainnet deployment + security review
@@ -330,16 +329,13 @@ Requires funded Stellar CLI identities (`sanca-deployer`, `sanca-member*`) with 
 
 ## Submission Checklist (APAC Hackathon)
 
-**Required before 15 July — still open:**
-
-- [ ] **Video demo** (2–3 minutes)
-- [ ] **Pitch deck** (team, problem, solution, roadmap, Stellar ecosystem benefit)
-
 **Done:**
 
 - [x] Public GitHub repo with detailed README
 - [x] Live app deployed (testnet-backed): [www.sanca.space](https://www.sanca.space)
 - [x] Smart contracts deployed on Stellar testnet
+- [x] Video demo [Youtube](https://youtu.be/feCH4332wEE?si=f30Wf0ZUIIv7TZd7)
+- [x] Pitch deck [Canva](https://canva.link/5bt3h9k42pci320)
 
 ---
 
